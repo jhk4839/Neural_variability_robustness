@@ -227,7 +227,7 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, adjacency_typ
         list_tot_var2_ABO_one_tt[sess_ind] = list_tot_var_one_tt.copy()
 
     # Save into a file
-    filename = 'D:\\Users\\USER\\Shin Lab\\code\\meansim_orthopar_ABO_allneu_' + adjacency_type + str(slope_ind) + '.pickle'
+    filename = 'meansim_orthopar_ABO_allneu_' + adjacency_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_mean_sim2_ABO_one_tt', 'list_orthopar2_ABO_one_tt', 'list_tot_var2_ABO_one_tt'],
                         'list_mean_sim2_ABO_one_tt': list_mean_sim2_ABO_one_tt, 'list_orthopar2_ABO_one_tt': list_orthopar2_ABO_one_tt, 'list_tot_var2_ABO_one_tt': list_tot_var2_ABO_one_tt}, f)
@@ -253,6 +253,6 @@ list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
 if __name__ == '__main__':
 
     with mp.Pool() as pool:
-        list_inputs = [[slope_ind, target_slope, 'geodesic'] for slope_ind, target_slope in enumerate(list_target_slopes) if slope_ind == 0]
+        list_inputs = [[slope_ind, target_slope, 'geodesic'] for slope_ind, target_slope in enumerate(list_target_slopes)]
         
         pool.starmap(compute_meansim_orthopar_ABO_RRneuron, list_inputs)

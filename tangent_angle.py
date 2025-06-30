@@ -377,7 +377,7 @@ def compute_tangent_angle_sess(sess_ind):
             print(f'slope {target_slope:.1f} duration {time.time() - start_t:.0f} sec')
 
         # Save into a file
-        filename = 'D:\\Users\\USER\\Shin Lab\\code\\tangent_angles_ABO_' + str(sess_ind) + '.pickle'
+        filename = 'tangent_angles_ABO_' + str(sess_ind) + '.pickle'
         with open(filename, "wb") as f:
             pickle.dump({'tree_variables': ['list_angles_asis', 'list_angles_RRneuron2'],
                         'list_angles_asis': list_angles_asis, 'list_angles_RRneuron2': list_angles_RRneuron2}, f)
@@ -408,6 +408,6 @@ num_sess = len(list_rate_all)
 if __name__ == '__main__':
 
     with mp.Pool() as pool:
-        list_inputs = [[sess_ind] for sess_ind in range(num_sess) if sess_ind == 5]
+        list_inputs = [[sess_ind] for sess_ind in range(num_sess)]
         
         pool.starmap(compute_tangent_angle_sess, list_inputs)

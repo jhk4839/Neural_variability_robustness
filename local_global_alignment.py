@@ -272,7 +272,7 @@ def compute_cos_sim_pc1_adj_ABO(slope_ind, target_slope, adjacency_type='geodesi
         list_cos_sim_pc1_global_RRneuron2[sess_ind] = list_cos_sim_pc1_global_RRneuron.copy()
 
     # Save into a file
-    filename = 'D:\\Users\\USER\\Shin Lab\\code\\align_pc1_ABO_' + adjacency_type + str(slope_ind) + '.pickle'
+    filename = 'align_pc1_ABO_' + adjacency_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_cos_sim_pc1_adj2', 'list_cos_sim_pc1_ori2', 'list_cos_sim_pc1_global2',
                                         'list_cos_sim_pc1_adj_RRneuron2', 'list_cos_sim_pc1_ori_RRneuron2', 'list_cos_sim_pc1_global_RRneuron2'],
@@ -316,6 +316,6 @@ list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
 if __name__ == '__main__':
 
     with mp.Pool() as pool:
-        list_inputs = [[slope_ind, target_slope, 'geodesic'] for slope_ind, target_slope in enumerate(list_target_slopes) if slope_ind == 0]
+        list_inputs = [[slope_ind, target_slope, 'geodesic'] for slope_ind, target_slope in enumerate(list_target_slopes)]
         
         pool.starmap(compute_cos_sim_pc1_adj_ABO, list_inputs)

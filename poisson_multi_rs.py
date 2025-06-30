@@ -185,7 +185,7 @@ def compare_two_poissons(sess_ind):
             start = time.time()
 
     # Save into a file
-    filename = 'D:\\Users\\USER\\Shin Lab\\code\\poisson_fit_rs_sep_ABO_' + str(sess_ind) + '.pickle'
+    filename = 'poisson_fit_rs_sep_ABO_' + str(sess_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_var_G_estim_neu', 'list_mu_estim_neu', 'sample_mean'],
                      'list_var_G_estim_neu': list_var_G_estim_neu, 'list_mu_estim_neu': list_mu_estim_neu, 'sample_mean': sample_mean}, f)
@@ -225,6 +225,6 @@ num_sess = 32
 if __name__ == '__main__':
     
     with mp.Pool() as pool:    
-        list_inputs = [[sess_ind] for sess_ind in range(num_sess) if sess_ind == 5]
+        list_inputs = [[sess_ind] for sess_ind in range(num_sess)]
         
         pool.starmap(compare_two_poissons, list_inputs)

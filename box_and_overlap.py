@@ -221,7 +221,7 @@ def compute_filling_boxcount(slope_ind, target_slope):
             list_box_ratios_RRneuron[sess_ind] = box_ratios.copy()
 
     # Save into a file
-    filename = 'D:\\Users\\USER\\Shin Lab\\code\\filling_boxcount_ABO_' + str(slope_ind) + '.pickle'
+    filename = 'filling_boxcount_ABO_' + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_box_ratios_asis', 'list_box_ratios_RRneuron', 'list_box_ratios_asis_isomap', 'list_box_ratios_RRneuron_isomap'],
                      'list_box_ratios_asis': list_box_ratios_asis, 'list_box_ratios_RRneuron': list_box_ratios_RRneuron,
@@ -387,7 +387,7 @@ def compute_overlap_stimpairs_consis(sess_ind):
         list_gap_RRneuron3[sampling_ind] = list_gap_RRneuron2.copy()
 
     # Save into a file
-    filename = 'D:\\Users\\USER\\Shin Lab\\code\\overlap_nbr_stimpairs_consis_ABO_' + str(sess_ind) +  '.pickle'
+    filename = 'overlap_nbr_stimpairs_consis_ABO_' + str(sess_ind) +  '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_overlap_asis2', 'list_overlap_RRneuron3', 'list_gap_asis2', 'list_gap_RRneuron3'],
                      'list_overlap_asis2': list_overlap_asis2, 'list_overlap_RRneuron3': list_overlap_RRneuron3,
@@ -535,7 +535,7 @@ def compute_overlap_stimpairs(sess_ind):
             list_gap_RRneuron2[slope_ind, trial_type_ind] = gap/list_pwdist[:, 2]
 
     # Save into a file
-    filename = 'D:\\Users\\USER\\Shin Lab\\code\\overlap_nbr_stimpairs_ABO_' + str(sess_ind) +  '.pickle'
+    filename = 'overlap_nbr_stimpairs_ABO_' + str(sess_ind) +  '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['mean_dist_mat_asis', 'list_overlap_asis', 'list_overlap_RRneuron2', 'list_gap_asis', 'list_gap_RRneuron2'],
                      'mean_dist_mat_asis': mean_dist_mat_asis, 'list_overlap_asis': list_overlap_asis, 'list_overlap_RRneuron2': list_overlap_RRneuron2,
@@ -567,7 +567,7 @@ list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
 if __name__ == '__main__':
 
     with mp.Pool() as pool:
-        list_inputs = [[slope_ind, target_slope] for slope_ind, target_slope in enumerate(list_target_slopes) if slope_ind == 0]
+        list_inputs = [[slope_ind, target_slope] for slope_ind, target_slope in enumerate(list_target_slopes)]
         
         pool.starmap(compute_filling_boxcount, list_inputs)
 
@@ -576,7 +576,7 @@ num_sess = 32
 if __name__ == '__main__':
 
     with mp.Pool() as pool:
-        list_inputs = [[sess_ind] for sess_ind in range(num_sess) if sess_ind == 5]
+        list_inputs = [[sess_ind] for sess_ind in range(num_sess)]
         
         pool.starmap(compute_overlap_stimpairs_consis, list_inputs)
 
@@ -585,6 +585,6 @@ num_sess = 32
 if __name__ == '__main__':
 
     with mp.Pool() as pool:
-        list_inputs = [[sess_ind] for sess_ind in range(num_sess) if sess_ind == 5]
+        list_inputs = [[sess_ind] for sess_ind in range(num_sess)]
         
         pool.starmap(compute_overlap_stimpairs, list_inputs)
