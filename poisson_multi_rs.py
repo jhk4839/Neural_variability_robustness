@@ -56,11 +56,10 @@ def neg_log_likelihood_mod1(list_s_r, spike_counts):
     return nLL
 
 # %%
-def fit_test_mod1(neu_ind, rate_train, rate_test, label_cnt_dict_train, rate_mean_train):
+def fit_test_mod1(neu_ind, rate_train, label_cnt_dict_train, rate_mean_train):
     
     ''' Parameter fitting for each stimulus '''
 
-    list_nLL_mod_tt = np.full(len(label_cnt_dict_train), np.nan)
     list_var_G_estim = np.full(len(label_cnt_dict_train), np.nan)
     list_mu_estim = np.full(len(label_cnt_dict_train), np.nan)
 
@@ -82,13 +81,7 @@ def fit_test_mod1(neu_ind, rate_train, rate_test, label_cnt_dict_train, rate_mea
             list_mu_estim[trial_type_ind] = res.x[0] * res.x[1]
             # list_mu_estim[trial_type_ind] = res.x[0]
 
-            # calculate test nLL
-            if rate_test is not None:
-                spike_counts = rate_test.loc[neu_ind, trial_type_train].copy()
-                nLL_test_mod = neg_log_likelihood_mod1(res.x, spike_counts) 
-                list_nLL_mod_tt[trial_type_ind] = nLL_test_mod
-
-    return list_nLL_mod_tt, list_var_G_estim, list_mu_estim
+    return list_var_G_estim, list_mu_estim
 
 # %%
 def compute_mean_var_trial_collapse(label_cnt_dict, rate_sorted):    
@@ -150,8 +143,6 @@ def compare_two_poissons(sess_ind):
     c_proc = mp.current_process()
     print("Running on Process",c_proc.name,"PID",c_proc.pid)
 
-    
-
     print(f'session index: {sess_ind}')
     
     rate = dc(list_rate_all[sess_ind])
@@ -184,8 +175,7 @@ def compare_two_poissons(sess_ind):
     for neu_ind in rate_sorted.index:
         
         # modulated Poisson
-        _, list_var_G_estim, list_mu_estim = \
-            fit_test_mod1(neu_ind, rate_sorted, None, stm_cnt_dict, rate_mean)
+        list_var_G_estim, list_mu_estim = fit_test_mod1(neu_ind, rate_sorted, stm_cnt_dict, rate_mean)
         
         list_var_G_estim_neu[neu_ind] = dc(list_var_G_estim)
         list_mu_estim_neu[neu_ind] = dc(list_mu_estim)
@@ -195,10 +185,8 @@ def compare_two_poissons(sess_ind):
             start = time.time()
 
     # Save into a file
-    filename = 'poisson_fit_rs_sep_ABO_' + str(sess_ind) + '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\poisson_fit_rs_sep_ABO_' + str(sess_ind) + '.pickle'
     with open(filename, "wb") as f:
-        # pickle.dump({'tree_variables': ['list_var_G_estim_neu', 'list_nLL_mod_cv', 'list_mu_estim_neu', 'sample_mean'],
-        #              'list_var_G_estim_neu': list_var_G_estim_neu, 'list_nLL_mod_cv': list_nLL_mod_cv, 'list_mu_estim_neu': list_mu_estim_neu, 'sample_mean': sample_mean}, f)
         pickle.dump({'tree_variables': ['list_var_G_estim_neu', 'list_mu_estim_neu', 'sample_mean'],
                      'list_var_G_estim_neu': list_var_G_estim_neu, 'list_mu_estim_neu': list_mu_estim_neu, 'sample_mean': sample_mean}, f)
             
@@ -215,7 +203,7 @@ with open('SVM_prerequisite_variables.pickle', 'rb') as f:
     list_stm_w1 = dc(SVM_prerequisite_variables['list_stm_w1'])
     list_neu_loc = dc(SVM_prerequisite_variables['list_neu_loc'])
     list_wfdur = dc(SVM_prerequisite_variables['list_wfdur'])
-    list_slopes_an_loglog_12 = dc(SVM_prerequisite_variables['list_slopes_an_loglog_12']) # high repeat trial type 주의
+    list_slopes_an_loglog_12 = dc(SVM_prerequisite_variables['list_slopes_an_loglog_12']) # high repeat trial type
 
 # ABO Neuropixels
 with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
@@ -237,6 +225,6 @@ num_sess = 32
 if __name__ == '__main__':
     
     with mp.Pool() as pool:    
-        list_inputs = [[sess_ind] for sess_ind in range(num_sess)]
+        list_inputs = [[sess_ind] for sess_ind in range(num_sess) if sess_ind == 5]
         
         pool.starmap(compare_two_poissons, list_inputs)

@@ -118,10 +118,8 @@ def normc(matrix):
 # %%
 # RSA across session pairs (ABO Neuropixels, RRneuron)
 
-def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
+def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type='cos_sim'):
     
-    ''' similarity_type is 'cos_sim', 'geodesic', or 'isomap' '''
-
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
 
@@ -145,7 +143,7 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
 
         print(f'ind: {ind}')
 
-        rate = list_rate_RS[ind].copy()
+        rate = list_rate_all[ind].copy()
         # rate_sorted = rate.sort_index(axis=1)
         stm = rate.columns.copy()
 
@@ -170,7 +168,7 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
         rate_sorted_mean, rate_sorted_var = np.repeat(rate_sorted_mean_coll[:, :, np.newaxis], min_num_trials, axis=2), \
             np.repeat(rate_sorted_var_coll[:, :, np.newaxis], min_num_trials, axis=2)
         
-        list_slopes_dr = list_slopes_RS_an_loglog[ind].copy()
+        list_slopes_dr = list_slopes_all_an_loglog[ind].copy()
 
         # # trial shuffling
         # rate_shuf = np.zeros_like(rate_sorted)
@@ -187,22 +185,6 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
 
             # repeat calculating similarity matrices
 
-            if similarity_type == 'geodesic' or similarity_type == 'isomap':
-                rate_sorted_2d = np.reshape(rate_sorted, (-1, num_trial_types*min_num_trials))
-
-                # isomap
-                n_components = 1 # target number of dimensions
-                # n_components = rate_sorted.shape[0] # target number of dimensions
-                n_neighbors = 5 # number of neighbors
-
-                isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
-                
-                rate_sorted_2d_isomap = isomap.fit_transform(rate_sorted_2d.T).T
-                dist_matrix_asis = isomap.dist_matrix_.copy() # 2D geodesic distance matrix
-
-                if similarity_type == 'isomap':
-                    dist_matrix_asis = cdist(rate_sorted_2d_isomap.T, rate_sorted_2d_isomap.T, 'euclidean')
-
             # n_neurons x n_stimuli 2D matrix sampling
 
             # if ind == 3:
@@ -216,22 +198,14 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
             count = 0
             for sampling_ind in range(n_sampling):
                 
-                if similarity_type == 'cos_sim':
-                    rate_sampled_trials1 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][0]]).copy() 
-                    rate_sampled_trials2 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][1]]).copy()
+                rate_sampled_trials1 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][0]]).copy() 
+                rate_sampled_trials2 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][1]]).copy()
 
-                    # calculate similarity matrix
-                    RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
+                # calculate similarity matrix
+                RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
 
-                    # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
-                    list_RSM[sampling_ind] = RSM.copy()
-
-                else:
-                    row_inds = np.linspace(tt_pairs[sampling_ind][0], tt_pairs[sampling_ind][0]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-                    col_inds = np.linspace(tt_pairs[sampling_ind][1], tt_pairs[sampling_ind][1]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-
-                    RSM = dist_matrix_asis[row_inds, :][:, col_inds].copy()
-                    list_RSM[sampling_ind] = RSM.copy()
+                # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
+                list_RSM[sampling_ind] = RSM.copy()
                 
                 count += 1
                 if count % 100 == 0:
@@ -276,22 +250,6 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
 
         # repeat calculating similarity matrices
 
-        if similarity_type == 'geodesic' or similarity_type == 'isomap':
-            rate_RRneuron_dr_2d = np.reshape(rate_RRneuron_dr, (-1, num_trial_types*min_num_trials))
-
-            # isomap
-            n_components = 1 # target number of dimensions
-            # n_components = rate_sorted.shape[0] # target number of dimensions
-            n_neighbors = 5 # number of neighbors
-
-            isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
-            
-            rate_RRneuron_dr_2d_isomap = isomap.fit_transform(rate_RRneuron_dr_2d.T).T
-            dist_matrix = isomap.dist_matrix_.copy() # 2D geodesic distance matrix
-
-            if similarity_type == 'isomap':
-                dist_matrix = cdist(rate_RRneuron_dr_2d_isomap.T, rate_RRneuron_dr_2d_isomap.T, 'euclidean')
-
         # n_neurons x n_stimuli 2D matrix sampling
 
         # if ind == 3:
@@ -305,21 +263,13 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
         count = 0
         for sampling_ind in range(n_sampling):
             
-            if similarity_type == 'cos_sim':
-                rate_sampled_trials1 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][0]]).copy() 
-                rate_sampled_trials2 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][1]]).copy()
+            rate_sampled_trials1 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][0]]).copy() 
+            rate_sampled_trials2 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][1]]).copy()
 
-                RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
+            RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
 
-                # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
-                list_RSM[sampling_ind] = RSM.copy()
-
-            else:
-                row_inds = np.linspace(tt_pairs[sampling_ind][0], tt_pairs[sampling_ind][0]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-                col_inds = np.linspace(tt_pairs[sampling_ind][1], tt_pairs[sampling_ind][1]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-
-                RSM = dist_matrix[row_inds, :][:, col_inds].copy()
-                list_RSM[sampling_ind] = RSM.copy()
+            # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
+            list_RSM[sampling_ind] = RSM.copy()
             
             count += 1
             if count % 100 == 0:
@@ -351,7 +301,7 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
         list_corr_sesspair[pair_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
-    filename = 'RSM_corr_sesspair_ABO_RSneu_' + similarity_type + str(slope_ind) + '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\RSM_corr_sesspair_ABO_allneu_' + similarity_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis', 'list_corr_sesspair_asis', 'list_rate_RRneuron_dr', 'list_RSM_mean_RRneuron', 'list_corr_sesspair'], \
                      'list_RSM_mean_asis': list_RSM_mean_asis, 'list_corr_sesspair_asis': list_corr_sesspair_asis,
@@ -363,10 +313,8 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
 # %%
 # RSA across session pairs (ABO Neuropixels, RRneuron)
 
-def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
+def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type='cos_sim'):
     
-    ''' similarity_type is 'cos_sim', 'geodesic', or 'isomap' '''
-
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
 
@@ -437,22 +385,6 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
 
                     # repeat calculating similarity matrices
 
-                    if similarity_type == 'geodesic' or similarity_type == 'isomap':
-                        rate_sorted_2d = np.reshape(rate_sorted, (-1, num_trial_types*min_num_trials))
-
-                        # isomap
-                        n_components = 1 # target number of dimensions
-                        # n_components = rate_sorted.shape[0] # target number of dimensions
-                        n_neighbors = 5 # number of neighbors
-
-                        isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
-                        
-                        rate_sorted_2d_isomap = isomap.fit_transform(rate_sorted_2d.T).T
-                        dist_matrix_asis = isomap.dist_matrix_.copy() # 2D geodesic distance matrix
-
-                        if similarity_type == 'isomap':
-                            dist_matrix_asis = cdist(rate_sorted_2d_isomap.T, rate_sorted_2d_isomap.T, 'euclidean')
-
                     # n_neurons x n_stimuli 2D matrix sampling
 
                     # if ind == 3:
@@ -466,22 +398,14 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
                     count = 0
                     for sampling_ind in range(n_sampling):
                         
-                        if similarity_type == 'cos_sim':
-                            rate_sampled_trials1 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][0]]).copy() 
-                            rate_sampled_trials2 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][1]]).copy()
+                        rate_sampled_trials1 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][0]]).copy() 
+                        rate_sampled_trials2 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][1]]).copy()
 
-                            # calculate similarity matrix
-                            RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
+                        # calculate similarity matrix
+                        RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
 
-                            # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
-                            list_RSM[sampling_ind] = RSM.copy()
-
-                        else:
-                            row_inds = np.linspace(tt_pairs[sampling_ind][0], tt_pairs[sampling_ind][0]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-                            col_inds = np.linspace(tt_pairs[sampling_ind][1], tt_pairs[sampling_ind][1]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-
-                            RSM = dist_matrix_asis[row_inds, :][:, col_inds].copy()
-                            list_RSM[sampling_ind] = RSM.copy()
+                        # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
+                        list_RSM[sampling_ind] = RSM.copy()
                         
                         count += 1
                         if count % 1000 == 0:
@@ -523,22 +447,6 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
 
                 # repeat calculating similarity matrices
 
-                if similarity_type == 'geodesic' or similarity_type == 'isomap':
-                    rate_RRneuron_dr_2d = np.reshape(rate_RRneuron_dr, (-1, num_trial_types*min_num_trials))
-
-                    # isomap
-                    n_components = 1 # target number of dimensions
-                    # n_components = rate_sorted.shape[0] # target number of dimensions
-                    n_neighbors = 5 # number of neighbors
-
-                    isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
-                    
-                    rate_RRneuron_dr_2d_isomap = isomap.fit_transform(rate_RRneuron_dr_2d.T).T
-                    dist_matrix = isomap.dist_matrix_.copy() # 2D geodesic distance matrix
-
-                    if similarity_type == 'isomap':
-                        dist_matrix = cdist(rate_RRneuron_dr_2d_isomap.T, rate_RRneuron_dr_2d_isomap.T, 'euclidean')
-
                 # n_neurons x n_stimuli 2D matrix sampling
 
                 # if ind == 3:
@@ -552,22 +460,14 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
                 count = 0
                 for sampling_ind in range(n_sampling):
                     
-                    if similarity_type == 'cos_sim':
-                        rate_sampled_trials1 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][0]]).copy() 
-                        rate_sampled_trials2 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][1]]).copy()
+                    rate_sampled_trials1 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][0]]).copy() 
+                    rate_sampled_trials2 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][1]]).copy()
 
-                        # calculate similarity matrix
-                        RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
+                    # calculate similarity matrix
+                    RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
 
-                        # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
-                        list_RSM[sampling_ind] = RSM.copy()
-
-                    else:
-                        row_inds = np.linspace(tt_pairs[sampling_ind][0], tt_pairs[sampling_ind][0]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-                        col_inds = np.linspace(tt_pairs[sampling_ind][1], tt_pairs[sampling_ind][1]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-
-                        RSM = dist_matrix[row_inds, :][:, col_inds].copy()
-                        list_RSM[sampling_ind] = RSM.copy()
+                    # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
+                    list_RSM[sampling_ind] = RSM.copy()
                     
                     count += 1
                     if count % 1000 == 0:
@@ -606,7 +506,7 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
         list_corr_sesspair_HVA[area] = list_corr_sesspair.copy()
     
     # Save into a file
-    filename = 'RSM_corr_sesspair_ABO_HVA_allneu_' + similarity_type + str(slope_ind) + '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\RSM_corr_sesspair_ABO_HVA_allneu_' + similarity_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis_HVA', 'list_corr_sesspair_asis_HVA', 'list_rate_RRneuron_dr_HVA', 'list_RSM_mean_RRneuron_HVA', 'list_corr_sesspair_HVA'],
                      'list_RSM_mean_asis_HVA': list_RSM_mean_asis_HVA, 'list_corr_sesspair_asis_HVA': list_corr_sesspair_asis_HVA,
@@ -617,10 +517,8 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
 # %%
 # RSA within sessions (ABO, RRneuron)
 
-def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
+def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type='cos_sim'):
     
-    ''' similarity_type is 'cos_sim', 'geodesic', or 'euclidean' '''
-
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
 
@@ -670,11 +568,11 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
         
         list_slopes_dr = list_slopes_all_an_loglog[sess_ind].copy()
 
-        # # trial shuffling
-        # rate_shuf = np.zeros_like(rate_sorted)
-        # for neu_ind in range(rate_sorted.shape[0]):
-        #     shuf_inds = np.random.permutation(rate_sorted.shape[2])
-        #     rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
+        # trial shuffling
+        rate_shuf = np.zeros_like(rate_sorted)
+        for neu_ind in range(rate_sorted.shape[0]):
+            shuf_inds = np.random.permutation(rate_sorted.shape[2])
+            rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
         # rate_sorted = rate_shuf.copy()
 
         # trial order re-randomization
@@ -728,22 +626,6 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
 
                 # repeat calculating similarity matrices
                 
-                if similarity_type == 'geodesic' or similarity_type == 'euclidean':
-                    rate_sorted_2d = np.reshape(rate_sorted, (-1, num_trial_types*num_trials))
-
-                    # isomap
-                    n_components = 1 # target number of dimensions
-                    # n_components = rate_sorted.shape[0] # target number of dimensions
-                    n_neighbors = 10 # number of neighbors
-
-                    isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
-                    
-                    rate_sorted_2d_isomap = isomap.fit_transform(rate_sorted_2d.T).T
-                    dist_matrix = isomap.dist_matrix_.copy() # 2D geodesic distance matrix
-
-                    if similarity_type == 'euclidean':
-                        dist_matrix = cdist(rate_sorted_2d_isomap.T, rate_sorted_2d_isomap.T, 'euclidean')
-                
                 # n_neurons x n_stimuli 2D matrix sampling
                 
                 tt_pairs = list(combinations(range(min_num_trials), 2))
@@ -757,25 +639,16 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
                 count = 0
                 for sampling_ind in range(n_sampling):
                     
-                    if similarity_type == 'cos_sim':
+                    rate_sampled_trials1_1 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
+                    rate_sampled_trials1_2 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
+                    rate_sampled_trials2_1 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
+                    rate_sampled_trials2_2 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
 
-                        rate_sampled_trials1_1 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
-                        rate_sampled_trials1_2 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
-                        rate_sampled_trials2_1 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
-                        rate_sampled_trials2_2 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
+                    RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
+                    RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
 
-                        RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
-                        RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
-
-                        list_RSM_neu1[sampling_ind] = RSM1.copy()
-                        list_RSM_neu2[sampling_ind] = RSM2.copy()
-
-                    else:
-                        row_inds = np.linspace(tt_pairs[sampling_ind][0], tt_pairs[sampling_ind][0]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-                        col_inds = np.linspace(tt_pairs[sampling_ind][1], tt_pairs[sampling_ind][1]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-
-                        RSM = dist_matrix[row_inds, :][:, col_inds].copy()
-                        list_RSM[sampling_ind] = RSM.copy()
+                    list_RSM_neu1[sampling_ind] = RSM1.copy()
+                    list_RSM_neu2[sampling_ind] = RSM2.copy()
 
                 RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # Average across trial samplings
                 RSM_mean_neu2 = np.nanmean(list_RSM_neu2, axis=0)
@@ -787,22 +660,6 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
             # Change slope
 
             # repeat calculating similarity matrices
-            
-            if similarity_type == 'geodesic' or similarity_type == 'euclidean':
-                rate_RRneuron_dr_2d = np.reshape(rate_RRneuron_dr, (-1, num_trial_types*num_trials))
-
-                # isomap
-                n_components = 1 # target number of dimensions
-                # n_components = rate_sorted.shape[0] # target number of dimensions
-                n_neighbors = 10 # number of neighbors
-
-                isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
-                
-                rate_RRneuron_dr_2d_isomap = isomap.fit_transform(rate_RRneuron_dr_2d.T).T
-                dist_matrix = isomap.dist_matrix_.copy() # 2D geodesic distance matrix
-
-                if similarity_type == 'euclidean':
-                    dist_matrix = cdist(rate_RRneuron_dr_2d_isomap.T, rate_RRneuron_dr_2d_isomap.T, 'euclidean')
             
             # n_neurons x n_stimuli 2D matrix sampling
             
@@ -817,25 +674,17 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
             count = 0
             for sampling_ind in range(n_sampling):
                 
-                if similarity_type == 'cos_sim':
-                    rate_sampled_trials1_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
-                    rate_sampled_trials1_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
-                    rate_sampled_trials2_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
-                    rate_sampled_trials2_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
+                rate_sampled_trials1_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
+                rate_sampled_trials1_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
+                rate_sampled_trials2_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
+                rate_sampled_trials2_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
 
-                    RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
-                    RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
+                RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
+                RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
 
-                    # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
-                    list_RSM_neu1[sampling_ind] = RSM1.copy()
-                    list_RSM_neu2[sampling_ind] = RSM2.copy()
-
-                else:
-                    row_inds = np.linspace(tt_pairs[sampling_ind][0], tt_pairs[sampling_ind][0]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-                    col_inds = np.linspace(tt_pairs[sampling_ind][1], tt_pairs[sampling_ind][1]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-
-                    RSM = dist_matrix[row_inds, :][:, col_inds].copy()
-                    list_RSM[sampling_ind] = RSM.copy()
+                # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
+                list_RSM_neu1[sampling_ind] = RSM1.copy()
+                list_RSM_neu2[sampling_ind] = RSM2.copy()
 
                 count += 1
                 if count % 1000 == 0:
@@ -849,7 +698,7 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
             list_corr_withinsess2[sess_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
-    filename = 'RSM_corr_withinsess_ABO_' + similarity_type + str(slope_ind) + '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\RSM_corr_withinsess_ABO_' + similarity_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis2', 'list_corr_withinsess2'], \
                     'list_corr_withinsess_asis2': list_corr_withinsess_asis2, 'list_corr_withinsess2': list_corr_withinsess2}, f)
@@ -859,10 +708,8 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
 # %%
 # RSA within sessions (ABO, RRneuron)
 
-def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
+def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type='cos_sim'):
     
-    ''' similarity_type is 'cos_sim', 'geodesic', or 'euclidean' '''
-
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
 
@@ -979,22 +826,6 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
 
                         # repeat calculating similarity matrices
                         
-                        if similarity_type == 'geodesic' or similarity_type == 'euclidean':
-                            rate_sorted_2d = np.reshape(rate_sorted, (-1, num_trial_types*num_trials))
-
-                            # isomap
-                            n_components = 1 # target number of dimensions
-                            # n_components = rate_sorted.shape[0] # target number of dimensions
-                            n_neighbors = 10 # number of neighbors
-
-                            isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
-                            
-                            rate_sorted_2d_isomap = isomap.fit_transform(rate_sorted_2d.T).T
-                            dist_matrix = isomap.dist_matrix_.copy() # 2D geodesic distance matrix
-
-                            if similarity_type == 'euclidean':
-                                dist_matrix = cdist(rate_sorted_2d_isomap.T, rate_sorted_2d_isomap.T, 'euclidean')
-                        
                         # n_neurons x n_stimuli 2D matrix sampling
                         
                         tt_pairs = list(combinations(range(min_num_trials), 2))
@@ -1008,25 +839,16 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
                         count = 0
                         for sampling_ind in range(n_sampling):
                             
-                            if similarity_type == 'cos_sim':
+                            rate_sampled_trials1_1 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
+                            rate_sampled_trials1_2 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
+                            rate_sampled_trials2_1 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
+                            rate_sampled_trials2_2 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
 
-                                rate_sampled_trials1_1 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
-                                rate_sampled_trials1_2 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
-                                rate_sampled_trials2_1 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
-                                rate_sampled_trials2_2 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
+                            RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
+                            RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
 
-                                RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
-                                RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
-
-                                list_RSM_neu1[sampling_ind] = RSM1.copy()
-                                list_RSM_neu2[sampling_ind] = RSM2.copy()
-
-                            else:
-                                row_inds = np.linspace(tt_pairs[sampling_ind][0], tt_pairs[sampling_ind][0]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-                                col_inds = np.linspace(tt_pairs[sampling_ind][1], tt_pairs[sampling_ind][1]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-
-                                RSM = dist_matrix[row_inds, :][:, col_inds].copy()
-                                list_RSM[sampling_ind] = RSM.copy()
+                            list_RSM_neu1[sampling_ind] = RSM1.copy()
+                            list_RSM_neu2[sampling_ind] = RSM2.copy()
 
                         RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # Average across trial samplings
                         RSM_mean_neu2 = np.nanmean(list_RSM_neu2, axis=0)
@@ -1038,22 +860,6 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
                     # Change slope
 
                     # repeat calculating similarity matrices
-                    
-                    if similarity_type == 'geodesic' or similarity_type == 'euclidean':
-                        rate_RRneuron_dr_2d = np.reshape(rate_RRneuron_dr, (-1, num_trial_types*num_trials))
-
-                        # isomap
-                        n_components = 1 # target number of dimensions
-                        # n_components = rate_sorted.shape[0] # target number of dimensions
-                        n_neighbors = 10 # number of neighbors
-
-                        isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
-                        
-                        rate_RRneuron_dr_2d_isomap = isomap.fit_transform(rate_RRneuron_dr_2d.T).T
-                        dist_matrix = isomap.dist_matrix_.copy() # 2D geodesic distance matrix
-
-                        if similarity_type == 'euclidean':
-                            dist_matrix = cdist(rate_RRneuron_dr_2d_isomap.T, rate_RRneuron_dr_2d_isomap.T, 'euclidean')
                     
                     # n_neurons x n_stimuli 2D matrix sampling
                     
@@ -1068,25 +874,17 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
                     count = 0
                     for sampling_ind in range(n_sampling):
                         
-                        if similarity_type == 'cos_sim':
-                            rate_sampled_trials1_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
-                            rate_sampled_trials1_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
-                            rate_sampled_trials2_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
-                            rate_sampled_trials2_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
+                        rate_sampled_trials1_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
+                        rate_sampled_trials1_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
+                        rate_sampled_trials2_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
+                        rate_sampled_trials2_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
 
-                            RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
-                            RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
+                        RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
+                        RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
 
-                            # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
-                            list_RSM_neu1[sampling_ind] = RSM1.copy()
-                            list_RSM_neu2[sampling_ind] = RSM2.copy()
-
-                        else:
-                            row_inds = np.linspace(tt_pairs[sampling_ind][0], tt_pairs[sampling_ind][0]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-                            col_inds = np.linspace(tt_pairs[sampling_ind][1], tt_pairs[sampling_ind][1]+(num_trial_types-1)*min_num_trials, num_trial_types, endpoint=True).astype(int)
-
-                            RSM = dist_matrix[row_inds, :][:, col_inds].copy()
-                            list_RSM[sampling_ind] = RSM.copy()
+                        # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
+                        list_RSM_neu1[sampling_ind] = RSM1.copy()
+                        list_RSM_neu2[sampling_ind] = RSM2.copy()
 
                         count += 1
                         if count % 1000 == 0:
@@ -1103,7 +901,7 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
         list_corr_withinsess_HVA[area] = list_corr_withinsess2.copy()
 
     # Save into a file
-    filename = 'RSM_corr_withinsess_ABO_HVA_' + similarity_type + str(slope_ind) + '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\RSM_corr_withinsess_ABO_HVA_' + similarity_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis_HVA', 'list_corr_withinsess_HVA'], \
                     'list_corr_withinsess_asis_HVA': list_corr_withinsess_asis_HVA, 'list_corr_withinsess_HVA': list_corr_withinsess_HVA}, f)
@@ -1162,11 +960,11 @@ def decode_ABO(sess_ind, decoder_type):
         rate = np.stack(list_rate_tt, axis=2)
         rate_sorted = np.transpose(rate, (0, 2, 1)) # num_neurons x num_trial_types x min_num_trials
 
-        # # trial shuffling
-        # rate_shuf = np.zeros_like(rate_sorted)
-        # for neu_ind in range(rate_sorted.shape[0]):
-        #     shuf_inds = np.random.permutation(rate_sorted.shape[2])
-        #     rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
+        # trial shuffling
+        rate_shuf = np.zeros_like(rate_sorted)
+        for neu_ind in range(rate_sorted.shape[0]):
+            shuf_inds = np.random.permutation(rate_sorted.shape[2])
+            rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
         # rate_sorted = rate_shuf.copy()
 
         # Compute mean & variance for each stimulus
@@ -1206,7 +1004,7 @@ def decode_ABO(sess_ind, decoder_type):
                 X_test = X_test.sub(mean_, axis=1)
 
                 if decoder_type == 'SVM':
-                    clf = svm.SVC(kernel='linear', max_iter=100)
+                    clf = svm.SVC(kernel='linear', max_iter=-1)
                 elif decoder_type == 'logit':
                     clf = logit(max_iter=100) # default: L2 regularization, lbfgs solver, C=1
                 elif decoder_type == 'RF':
@@ -1300,7 +1098,7 @@ def decode_ABO(sess_ind, decoder_type):
                     X_test = X_test.sub(mean_, axis=1)
 
                     if decoder_type == 'SVM':
-                        clf = svm.SVC(kernel='linear', max_iter=100)
+                        clf = svm.SVC(kernel='linear', max_iter=-1)
                     elif decoder_type == 'logit':
                         clf = logit(max_iter=100) # default: L2 regularization, lbfgs solver, C=1
                     elif decoder_type == 'RF':
@@ -1336,7 +1134,7 @@ def decode_ABO(sess_ind, decoder_type):
             print(f'sess_ind: {sess_ind}, target slope {target_slope:.1f}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = decoder_type + '_decoding_ABO_allstim_' + str(sess_ind) + '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\' + decoder_type + '_decoding_ABO_allstim_' + str(sess_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['mean_confusion_test_asis', 'mean_accuracy_asis', 'list_mean_confusion_test_RRneuron', 'list_mean_accuracy_RRneuron'],
                      'mean_confusion_test_asis': mean_confusion_test_asis, 'mean_accuracy_asis': mean_accuracy_asis,
@@ -1346,9 +1144,7 @@ def decode_ABO(sess_ind, decoder_type):
 
 # %%
 # decoding (ABO, HVA)
-def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
-
-    ''' decoder_type is SVM or '''
+def decode_ABO_HVA(slope_ind, target_slope, decoder_type='SVM'):
 
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
@@ -1567,7 +1363,7 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
         list_mean_accuracy_RRneuron_HVA[area] = list_mean_accuracy_RRneuron.copy()
 
     # Save into a file
-    filename = decoder_type + '_decoding_ABO_HVA_' + str(slope_ind) + '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\' + decoder_type + '_decoding_ABO_HVA_' + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_mean_confusion_test_HVA', 'list_mean_accuracy_HVA', 'list_mean_confusion_test_RRneuron_HVA', 'list_mean_accuracy_RRneuron_HVA'],
                      'list_mean_confusion_test_HVA': list_mean_confusion_test_HVA, 'list_mean_accuracy_HVA': list_mean_accuracy_HVA,
@@ -1602,26 +1398,50 @@ with open('resp_matrix_ep_HVA_allensdk.pickle', 'rb') as f:
 list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
 num_sess = 32
 
+# RSA across session pairs
+if __name__ == '__main__':
+
+    with mp.Pool() as pool:
+        list_inputs = [[slope_ind, target_slope, 'cos_sim'] for slope_ind, target_slope in enumerate(list_target_slopes)]
+        
+        pool.starmap(RSA_across_sesspairs_ABO, list_inputs)
+
 # # RSA across session pairs
 # if __name__ == '__main__':
 
 #     with mp.Pool() as pool:
-#         list_inputs = [[slope_ind, target_slope, 'cos_sim'] for slope_ind, target_slope in enumerate(list_target_slopes)]
+#         list_inputs = [[slope_ind, target_slope, 'cos_sim'] for slope_ind, target_slope in enumerate(list_target_slopes) if slope_ind == 0]
         
-#         pool.starmap(RSA_across_sesspairs_ABO, list_inputs)
+#         pool.starmap(RSA_across_sesspairs_ABO_HVA, list_inputs)
 
 # # RSA within sessions
 # if __name__ == '__main__':
 
 #     with mp.Pool() as pool:
-#         list_inputs = [[slope_ind, target_slope, 'cos_sim'] for slope_ind, target_slope in enumerate(list_target_slopes)]
+#         list_inputs = [[slope_ind, target_slope, 'cos_sim'] for slope_ind, target_slope in enumerate(list_target_slopes) if slope_ind == 0]
+        
+#         pool.starmap(RSA_withinsess_ABO, list_inputs)
+
+# # RSA within sessions
+# if __name__ == '__main__':
+
+#     with mp.Pool() as pool:
+#         list_inputs = [[slope_ind, target_slope, 'cos_sim'] for slope_ind, target_slope in enumerate(list_target_slopes) if slope_ind == 0]
         
 #         pool.starmap(RSA_withinsess_ABO_HVA, list_inputs)
 
-# decoding
-if __name__ == '__main__':
+# # decoding
+# if __name__ == '__main__':
 
-    with mp.Pool() as pool:
-        list_inputs = [[sess_ind, 'SVM'] for sess_ind in range(num_sess)]
+#     with mp.Pool() as pool:
+#         list_inputs = [[sess_ind, 'SVM'] for sess_ind in range(num_sess) if sess_ind == 5]
         
-        pool.starmap(decode_ABO, list_inputs)
+#         pool.starmap(decode_ABO, list_inputs)
+
+# # decoding
+# if __name__ == '__main__':
+
+#     with mp.Pool() as pool:
+#         list_inputs = [[slope_ind, target_slope, 'SVM'] for slope_ind, target_slope in enumerate(list_target_slopes) if slope_ind == 0]
+        
+#         pool.starmap(decode_ABO_HVA, list_inputs)

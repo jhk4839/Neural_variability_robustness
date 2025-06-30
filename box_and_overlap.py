@@ -195,13 +195,12 @@ def compute_filling_boxcount(slope_ind, target_slope):
 
             # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
             # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
-            offset = pow(10, (list_slopes_dr.iloc[0, :]-target_slope) * np.log10(rate_sorted_mean_coll.mean(axis=0)) + list_slopes_dr.iloc[1, :]) 
             offset = pow(10, (list_slopes_dr.iloc[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr.iloc[1, :]) 
 
             var_rs_noisy = \
                 pow(10, np.log10(rate_sorted_var_coll).sub(list_slopes_dr.iloc[1, :], axis=1)\
                     .div(list_slopes_dr.iloc[0, :], axis=1).mul(target_slope).add(np.log10(np.array(offset)), axis=1)) # collapsed
-            var_rs_noisy = np.repeat(var_rs_noisy, all_stm_counts, axis=1)
+            var_rs_noisy = np.repeat(var_rs_noisy.values, all_stm_counts, axis=1)
 
             # Compute changed residual and add back to the mean            
             rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
@@ -222,7 +221,7 @@ def compute_filling_boxcount(slope_ind, target_slope):
             list_box_ratios_RRneuron[sess_ind] = box_ratios.copy()
 
     # Save into a file
-    filename = 'filling_boxcount_ABO_' + str(slope_ind) + '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\filling_boxcount_ABO_' + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_box_ratios_asis', 'list_box_ratios_RRneuron', 'list_box_ratios_asis_isomap', 'list_box_ratios_RRneuron_isomap'],
                      'list_box_ratios_asis': list_box_ratios_asis, 'list_box_ratios_RRneuron': list_box_ratios_RRneuron,
@@ -341,7 +340,7 @@ def compute_overlap_stimpairs_consis(sess_ind):
             var_rs_noisy = \
                 pow(10, np.log10(rate_sorted_var_coll).sub(list_slopes_dr.iloc[1, :], axis=1)\
                     .div(list_slopes_dr.iloc[0, :], axis=1).mul(target_slope).add(np.log10(np.array(offset)), axis=1)) # collapsed
-            var_rs_noisy = np.repeat(var_rs_noisy, all_stm_counts, axis=1)
+            var_rs_noisy = np.repeat(var_rs_noisy.values, all_stm_counts, axis=1)
 
             # Compute changed residual and add back to the mean            
             rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
@@ -388,7 +387,7 @@ def compute_overlap_stimpairs_consis(sess_ind):
         list_gap_RRneuron3[sampling_ind] = list_gap_RRneuron2.copy()
 
     # Save into a file
-    filename = 'overlap_nbr_stimpairs_consis_ABO_' + str(sess_ind) +  '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\overlap_nbr_stimpairs_consis_ABO_' + str(sess_ind) +  '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_overlap_asis2', 'list_overlap_RRneuron3', 'list_gap_asis2', 'list_gap_RRneuron3'],
                      'list_overlap_asis2': list_overlap_asis2, 'list_overlap_RRneuron3': list_overlap_RRneuron3,
@@ -498,7 +497,7 @@ def compute_overlap_stimpairs(sess_ind):
         var_rs_noisy = \
             pow(10, np.log10(rate_sorted_var_coll).sub(list_slopes_dr.iloc[1, :], axis=1)\
                 .div(list_slopes_dr.iloc[0, :], axis=1).mul(target_slope).add(np.log10(np.array(offset)), axis=1)) # collapsed
-        var_rs_noisy = np.repeat(var_rs_noisy, all_stm_counts, axis=1)
+        var_rs_noisy = np.repeat(var_rs_noisy.values, all_stm_counts, axis=1)
 
         # Compute changed residual and add back to the mean            
         rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
@@ -536,7 +535,7 @@ def compute_overlap_stimpairs(sess_ind):
             list_gap_RRneuron2[slope_ind, trial_type_ind] = gap/list_pwdist[:, 2]
 
     # Save into a file
-    filename = 'overlap_nbr_stimpairs_ABO_' + str(sess_ind) +  '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\overlap_nbr_stimpairs_ABO_' + str(sess_ind) +  '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['mean_dist_mat_asis', 'list_overlap_asis', 'list_overlap_RRneuron2', 'list_gap_asis', 'list_gap_RRneuron2'],
                      'mean_dist_mat_asis': mean_dist_mat_asis, 'list_overlap_asis': list_overlap_asis, 'list_overlap_RRneuron2': list_overlap_RRneuron2,
@@ -564,19 +563,28 @@ with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
 # multiprocessing
 list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
 
-# # filling box count
-# if __name__ == '__main__':
+# filling box count
+if __name__ == '__main__':
 
-#     with mp.Pool() as pool:
-#         list_inputs = [[slope_ind, target_slope] for slope_ind, target_slope in enumerate(list_target_slopes)]
+    with mp.Pool() as pool:
+        list_inputs = [[slope_ind, target_slope] for slope_ind, target_slope in enumerate(list_target_slopes) if slope_ind == 0]
         
-#         pool.starmap(compute_filling_boxcount, list_inputs)
+        pool.starmap(compute_filling_boxcount, list_inputs)
 
 # overlap between stimulus pairs
 num_sess = 32
 if __name__ == '__main__':
 
     with mp.Pool() as pool:
-        list_inputs = [[sess_ind] for sess_ind in range(num_sess)]
+        list_inputs = [[sess_ind] for sess_ind in range(num_sess) if sess_ind == 5]
+        
+        pool.starmap(compute_overlap_stimpairs_consis, list_inputs)
+
+# overlap between stimulus pairs
+num_sess = 32
+if __name__ == '__main__':
+
+    with mp.Pool() as pool:
+        list_inputs = [[sess_ind] for sess_ind in range(num_sess) if sess_ind == 5]
         
         pool.starmap(compute_overlap_stimpairs, list_inputs)

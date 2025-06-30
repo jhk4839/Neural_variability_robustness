@@ -22,7 +22,6 @@ import seaborn as sns
 from copy import deepcopy
 from statsmodels.stats.multitest import multipletests
 import math
-import sympy as sp
 from itertools import combinations, product
 
 from sklearn import svm
@@ -98,10 +97,8 @@ def cos_sim(x, y):
 # %%
 # ABO PC1 analysis (PC1 of each stimulus vs. local/global PC1)
 
-def compute_cos_sim_pc1_adj_ABO(slope_ind, target_slope, adjacency_type):
+def compute_cos_sim_pc1_adj_ABO(slope_ind, target_slope, adjacency_type='geodesic'):
     
-    '''adjacency_type is either 'cos_sim' or 'geodesic' '''
-
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
 
@@ -135,20 +132,18 @@ def compute_cos_sim_pc1_adj_ABO(slope_ind, target_slope, adjacency_type):
 
         list_slopes_dr = pd.DataFrame(list_slopes_all_an_loglog[sess_ind], \
                                     columns=rate_sorted_mean_coll.columns).copy()
-
-        if adjacency_type == 'geodesic':
             
-            # concatenate centroids of all stimuli
-            rate_plus_mean = pd.concat([rate_sorted, rate_sorted_mean_coll], axis=1)
+        # concatenate centroids of all stimuli
+        rate_plus_mean = pd.concat([rate_sorted, rate_sorted_mean_coll], axis=1)
 
-            # Compute geodesic distance matrix
-            n_components = 1 # target number of dimensions
-            n_neighbors = 5 # number of neighbors
+        # Compute geodesic distance matrix
+        n_components = 1 # target number of dimensions
+        n_neighbors = 5 # number of neighbors
 
-            isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
-            
-            isomap.fit(rate_plus_mean.T)
-            mean_dist_mat_asis = isomap.dist_matrix_[rate_sorted.shape[1]:, rate_sorted.shape[1]:].copy() # inter-centroid geodesic distance matrix
+        isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
+        
+        isomap.fit(rate_plus_mean.T)
+        mean_dist_mat_asis = isomap.dist_matrix_[rate_sorted.shape[1]:, rate_sorted.shape[1]:].copy() # inter-centroid geodesic distance matrix
 
         # Compute local/global alignment
         n_components = 1
@@ -170,22 +165,10 @@ def compute_cos_sim_pc1_adj_ABO(slope_ind, target_slope, adjacency_type):
 
                 bool_not_tt = rate_sorted_mean_coll.columns != trial_type
 
-                if adjacency_type == 'cos_sim':
-                    adj_tt_ind = np.argmax(list_RSM_cos_coll_ABO[sess_ind][trial_type_ind, bool_not_tt]) # exclude current stimulus 
-                    adj_tt_ind_pair = np.argsort(list_RSM_cos_coll_ABO[sess_ind][trial_type_ind, bool_not_tt])[-2:].copy() 
-                elif adjacency_type == 'geodesic':
-                    adj_tt_ind = np.argmin(mean_dist_mat_asis[trial_type_ind, bool_not_tt]) # exclude current stimulus
-                    adj_tt_ind_pair = np.argsort(mean_dist_mat_asis[trial_type_ind, bool_not_tt])[:2].copy()
-                else:
-                    raise Exception('wrong adjacency_type')
-                
+                adj_tt_ind = np.argmin(mean_dist_mat_asis[trial_type_ind, bool_not_tt]) # exclude current stimulus
                 if adj_tt_ind >= trial_type_ind:
                     adj_tt_ind = adj_tt_ind + 1 # to original index before excluding the stimulus
-                for ind, tt_ind in enumerate(adj_tt_ind_pair):
-                    if tt_ind >= trial_type_ind:
-                        adj_tt_ind_pair[ind] = adj_tt_ind_pair[ind] + 1
                 adj_tt = rate_sorted_mean_coll.columns[adj_tt_ind]
-                adj_tt_pair = rate_sorted_mean_coll.columns[adj_tt_ind_pair]
 
                 # compute alignment with neighboring stimulus PC1
                 rate_adjtt = rate_sorted.loc[:, adj_tt].copy()
@@ -263,22 +246,10 @@ def compute_cos_sim_pc1_adj_ABO(slope_ind, target_slope, adjacency_type):
 
             bool_not_tt = rate_mean_RRneuron_coll.columns != trial_type
 
-            if adjacency_type == 'cos_sim':
-                adj_tt_ind = np.argmax(list_RSM_cos_coll_ABO[sess_ind][trial_type_ind, bool_not_tt]) # exclude current stimulus
-                adj_tt_ind_pair = np.argsort(list_RSM_cos_coll_ABO[sess_ind][trial_type_ind, bool_not_tt])[-2:].copy()
-            elif adjacency_type == 'geodesic':
-                adj_tt_ind = np.argmin(mean_dist_mat_asis[trial_type_ind, bool_not_tt]) # exclude current stimulus
-                adj_tt_ind_pair = np.argsort(mean_dist_mat_asis[trial_type_ind, bool_not_tt])[:2].copy()
-            else:
-                raise Exception('wrong adjacency_type')
-            
+            adj_tt_ind = np.argmin(mean_dist_mat_asis[trial_type_ind, bool_not_tt]) # exclude current stimulus            
             if adj_tt_ind >= trial_type_ind:
-                adj_tt_ind = adj_tt_ind + 1 # to original index before excluding the stimulus
-            for ind, tt_ind in enumerate(adj_tt_ind_pair):
-                if tt_ind >= trial_type_ind:
-                    adj_tt_ind_pair[ind] = adj_tt_ind_pair[ind] + 1       
+                adj_tt_ind = adj_tt_ind + 1 # to original index before excluding the stimulus 
             adj_tt = rate_sorted_mean_coll.columns[adj_tt_ind]
-            adj_tt_pair = rate_sorted_mean_coll.columns[adj_tt_ind_pair]
 
             # compute alignment with neighboring stimulus PC1
             rate_adjtt_RRneuron = rate_RRneuron_dr.loc[:, adj_tt].copy()
@@ -301,7 +272,7 @@ def compute_cos_sim_pc1_adj_ABO(slope_ind, target_slope, adjacency_type):
         list_cos_sim_pc1_global_RRneuron2[sess_ind] = list_cos_sim_pc1_global_RRneuron.copy()
 
     # Save into a file
-    filename = 'align_pc1_ABO_' + adjacency_type + str(slope_ind) + '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\align_pc1_ABO_' + adjacency_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_cos_sim_pc1_adj2', 'list_cos_sim_pc1_ori2', 'list_cos_sim_pc1_global2',
                                         'list_cos_sim_pc1_adj_RRneuron2', 'list_cos_sim_pc1_ori_RRneuron2', 'list_cos_sim_pc1_global_RRneuron2'],
@@ -322,7 +293,7 @@ with open('SVM_prerequisite_variables.pickle', 'rb') as f:
     list_stm_w1 = SVM_prerequisite_variables['list_stm_w1'].copy()
     list_neu_loc = SVM_prerequisite_variables['list_neu_loc'].copy()
     list_wfdur = SVM_prerequisite_variables['list_wfdur'].copy()
-    list_slopes_an_loglog_12 = SVM_prerequisite_variables['list_slopes_an_loglog_12'].copy() # high repeat trial type 주의
+    list_slopes_an_loglog_12 = SVM_prerequisite_variables['list_slopes_an_loglog_12'].copy() # high repeat trial type
 
 # ABO Neuropixels
 with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
@@ -345,6 +316,6 @@ list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
 if __name__ == '__main__':
 
     with mp.Pool() as pool:
-        list_inputs = [[slope_ind, target_slope, 'geodesic'] for slope_ind, target_slope in enumerate(list_target_slopes)]
+        list_inputs = [[slope_ind, target_slope, 'geodesic'] for slope_ind, target_slope in enumerate(list_target_slopes) if slope_ind == 0]
         
         pool.starmap(compute_cos_sim_pc1_adj_ABO, list_inputs)

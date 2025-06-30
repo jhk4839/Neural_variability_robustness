@@ -145,8 +145,6 @@ def weighted_angle(A_left, B_left, A_sing, B_sing):
 # %%
 # Compute tangent space angles for neighboring stimulus pairs
 def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis):
-    
-    n_neighbors = 5 # knn
 
     # For each stimulus, compute tangent space angle with its neighbor
     list_angles2 = np.zeros(rate_sorted_mean_coll.shape[1]) 
@@ -233,11 +231,12 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
 
         # 4. Compute tangent space angles
         
+        n_neighbors = 5 # knn
         nbrs = NearestNeighbors(n_neighbors=n_neighbors)
         
         rate_pair_pos = pd.concat([rate_tt_pos, rate_tt_pos_rev], axis=1)
         nbrs.fit(rate_pair_pos.T)
-        nbr_inds = nbrs.kneighbors(rate_pair_pos.T, return_distance=False) # num_pair_trials x n_neighbors (neighbor can include the query)
+        nbr_inds = nbrs.kneighbors(rate_pair_pos.T, return_distance=False) # num_pair_trials x n_neighbors (neighbors can include the query)
         nbr_inds = pd.DataFrame(nbr_inds, index=rate_pair_pos.columns)
         nbr_inds_tt = nbr_inds.loc[trial_type].loc[cand_inds].copy()
         nbr_inds_tt_rev = nbr_inds.loc[adj_tt].loc[cand_inds_rev].copy()
@@ -378,7 +377,7 @@ def compute_tangent_angle_sess(sess_ind):
             print(f'slope {target_slope:.1f} duration {time.time() - start_t:.0f} sec')
 
         # Save into a file
-        filename = 'tangent_angles_ABO_' + str(sess_ind) + '.pickle'
+        filename = 'D:\\Users\\USER\\Shin Lab\\code\\tangent_angles_ABO_' + str(sess_ind) + '.pickle'
         with open(filename, "wb") as f:
             pickle.dump({'tree_variables': ['list_angles_asis', 'list_angles_RRneuron2'],
                         'list_angles_asis': list_angles_asis, 'list_angles_RRneuron2': list_angles_RRneuron2}, f)
@@ -409,6 +408,6 @@ num_sess = len(list_rate_all)
 if __name__ == '__main__':
 
     with mp.Pool() as pool:
-        list_inputs = [[sess_ind] for sess_ind in range(num_sess)]
+        list_inputs = [[sess_ind] for sess_ind in range(num_sess) if sess_ind == 5]
         
         pool.starmap(compute_tangent_angle_sess, list_inputs)

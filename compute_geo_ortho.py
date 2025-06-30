@@ -106,9 +106,7 @@ def compute_orth_par_dist(manifold_name1, manifold_name2, rate_12, rate_sorted_m
 # %%
 # ABO Neuropixels mean similarity vs. orthogonal variance (RRneuron) (all neurons)
 
-def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, similarity_type):
-
-    ''' similarity_type is 'cos_sim', 'geodesic' or 'isomap' '''
+def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, adjacency_type='geodesic'):
 
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
@@ -164,7 +162,7 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, similarity_ty
         var_rs_noisy = \
             pow(10, np.log10(rate_sorted_var_coll).sub(list_slopes_dr.iloc[1, :], axis=1)\
                 .div(list_slopes_dr.iloc[0, :], axis=1).mul(target_slope).add(np.log10(np.array(offset)), axis=1)) # collapsed
-        var_rs_noisy = np.repeat(var_rs_noisy, all_stm_counts, axis=1)
+        var_rs_noisy = np.repeat(var_rs_noisy.values, all_stm_counts, axis=1)
 
         # Compute changed residual and add back to the mean            
         rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
@@ -186,19 +184,18 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, similarity_ty
         # print(FF_RRneuron)
         # print(rate_var_RRneuron_dr)
 
-        if similarity_type == 'geodesic':
-            # concatenate centroids of all stimuli
-            rate_plus_mean = pd.concat([rate_RRneuron_dr, rate_mean_RRneuron_coll], axis=1)
+        # concatenate centroids of all stimuli
+        rate_plus_mean = pd.concat([rate_RRneuron_dr, rate_mean_RRneuron_coll], axis=1)
 
-            # Compute geodesic distance matrix
-            n_components = 1 # target number of dimensions
-            # n_components = rate_RRneuron_dr.shape[0] # target number of dimensions
-            n_neighbors = 5 # number of neighbors
+        # Compute geodesic distance matrix
+        n_components = 1 # target number of dimensions
+        # n_components = rate_RRneuron_dr.shape[0] # target number of dimensions
+        n_neighbors = 5 # number of neighbors
 
-            isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
-            
-            isomap.fit(rate_plus_mean.T)
-            mean_dist_mat_RRneuron = isomap.dist_matrix_[rate_RRneuron_dr.shape[1]:, rate_RRneuron_dr.shape[1]:].copy() # inter-centroid geodesic distance matrix
+        isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
+        
+        isomap.fit(rate_plus_mean.T)
+        mean_dist_mat_RRneuron = isomap.dist_matrix_[rate_RRneuron_dr.shape[1]:, rate_RRneuron_dr.shape[1]:].copy() # inter-centroid geodesic distance matrix
                         
         # Iterate over all stimuli (~25 min)
         list_mean_sim_one_tt = np.zeros((num_trial_types, num_trial_types-1))
@@ -210,11 +207,7 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, similarity_ty
             bool_not_tt = rate_sorted_mean_coll.columns != trial_type
 
             # compute similarity between centroids
-            if similarity_type == 'cos_sim':
-                list_mean_sim_one_tt[trial_type_ind] = [cos_sim(rate_sorted_mean_coll.loc[:, trial_type], rate_sorted_mean_coll.loc[:, partner_tt]) \
-                                                    for partner_tt in rate_sorted_mean_coll.columns[bool_not_tt]]
-            else:
-                list_mean_sim_one_tt[trial_type_ind] = mean_dist_mat_RRneuron[trial_type_ind, bool_not_tt].copy()
+            list_mean_sim_one_tt[trial_type_ind] = mean_dist_mat_RRneuron[trial_type_ind, bool_not_tt].copy()
 
             # compute orthogonal variance against partner stimulus manifold
             for partner_ind, partner_tt in enumerate(rate_sorted_mean_coll.columns[bool_not_tt]):
@@ -227,14 +220,14 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, similarity_ty
                                                             np.var(np.linalg.norm(mat_par.astype(np.float32), axis=0), ddof=1)]
             
             # compute total variance for normalization
-            list_tot_var_one_tt[trial_type_ind] = rate_sorted_var_coll.loc[:, trial_type].sum() 
+            list_tot_var_one_tt[trial_type_ind] = rate_sorted_var_coll.loc[:, trial_type].mean() 
 
         list_mean_sim2_ABO_one_tt[sess_ind] = list_mean_sim_one_tt.copy()
         list_orthopar2_ABO_one_tt[sess_ind] = list_orthopar_one_tt.copy()
         list_tot_var2_ABO_one_tt[sess_ind] = list_tot_var_one_tt.copy()
 
     # Save into a file
-    filename = 'meansim_orthopar_ABO_allneu_' + similarity_type + str(slope_ind) + '.pickle'
+    filename = 'D:\\Users\\USER\\Shin Lab\\code\\meansim_orthopar_ABO_allneu_' + adjacency_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_mean_sim2_ABO_one_tt', 'list_orthopar2_ABO_one_tt', 'list_tot_var2_ABO_one_tt'],
                         'list_mean_sim2_ABO_one_tt': list_mean_sim2_ABO_one_tt, 'list_orthopar2_ABO_one_tt': list_orthopar2_ABO_one_tt, 'list_tot_var2_ABO_one_tt': list_tot_var2_ABO_one_tt}, f)
@@ -260,6 +253,6 @@ list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
 if __name__ == '__main__':
 
     with mp.Pool() as pool:
-        list_inputs = [[slope_ind, target_slope, 'geodesic'] for slope_ind, target_slope in enumerate(list_target_slopes)]
+        list_inputs = [[slope_ind, target_slope, 'geodesic'] for slope_ind, target_slope in enumerate(list_target_slopes) if slope_ind == 0]
         
         pool.starmap(compute_meansim_orthopar_ABO_RRneuron, list_inputs)
