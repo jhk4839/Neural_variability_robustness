@@ -36,7 +36,7 @@ import time
 # from pycaret.classification import *
 
 # %%
-# negative log likelihood 함수 (modulated Poisson)
+# negative log likelihood (modulated Poisson)
 # def neg_log_likelihood_mod1(list_mu_var_G, spike_counts):
 def neg_log_likelihood_mod1(list_s_r, spike_counts):
     r = list_s_r[1]
@@ -58,7 +58,7 @@ def neg_log_likelihood_mod1(list_s_r, spike_counts):
 # %%
 def fit_test_mod1(neu_ind, rate_train, rate_test, label_cnt_dict_train, rate_mean_train):
     
-    ''' 각 trial type별로 parameter fitting '''
+    ''' Parameter fitting for each stimulus '''
 
     list_nLL_mod_tt = np.full(len(label_cnt_dict_train), np.nan)
     list_var_G_estim = np.full(len(label_cnt_dict_train), np.nan)
@@ -66,11 +66,11 @@ def fit_test_mod1(neu_ind, rate_train, rate_test, label_cnt_dict_train, rate_mea
 
     for trial_type_ind, trial_type_train in enumerate(label_cnt_dict_train):
         
-        # train data에서 특정 trial type 내의 모든 trial에 대해 rate 0인지 기록
+        # Record whether the rate is zero for all trials of a specific trial type in the training data
         all_zero = (rate_train.loc[neu_ind, trial_type_train].sum() == 0)
                 
         if ~all_zero:
-            # likelihood function에 필요한 변수들 선언
+            # variables needed for likelihood function
             spike_counts = rate_train.loc[neu_ind, trial_type_train].copy()
             initial_params = np.array([rate_mean_train.loc[neu_ind, trial_type_train], 1])
             
@@ -82,10 +82,10 @@ def fit_test_mod1(neu_ind, rate_train, rate_test, label_cnt_dict_train, rate_mea
             list_mu_estim[trial_type_ind] = res.x[0] * res.x[1]
             # list_mu_estim[trial_type_ind] = res.x[0]
 
-            # test nLL 계산
+            # calculate test nLL
             if rate_test is not None:
                 spike_counts = rate_test.loc[neu_ind, trial_type_train].copy()
-                nLL_test_mod = neg_log_likelihood_mod1(res.x, spike_counts) # res.x는 fitting된 parameter들
+                nLL_test_mod = neg_log_likelihood_mod1(res.x, spike_counts) 
                 list_nLL_mod_tt[trial_type_ind] = nLL_test_mod
 
     return list_nLL_mod_tt, list_var_G_estim, list_mu_estim
@@ -145,37 +145,37 @@ def compute_mean_var_trial_collapse_cv(label_cnt_dict_train, label_cnt_dict_test
 # %%
 def compare_two_poissons(sess_ind):
 
-    ''' 각 trial type, 각 neuron별로 r, s fitting. 따라서 across trial types, across neurons 모두 가능 '''
+    ''' Fit r, s for each combination of stimulus and neuron '''
 
     c_proc = mp.current_process()
     print("Running on Process",c_proc.name,"PID",c_proc.pid)
 
-    # Modulated Poisson vs. Ordinary Poisson Goodness-of-Fit 비교 (all neurons)
+    
 
     print(f'session index: {sess_ind}')
     
     rate = dc(list_rate_all[sess_ind])
     stm = rate.columns.copy()
 
-    # delta t 곱해서 spike count로 만들기
+    # Multiply by delta t to convert to spike counts
     rate = rate * 0.25
 
-    all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) # 모든 trial type counting
+    all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
     stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
 
     # parameter fitting
 
-    # stm type별 counting & string name dictionary 제작
+    # Create a counting dictionary for each stimulus
     rate_sorted = rate.sort_index(axis=1)
     stm_sorted = np.array(sorted(stm))
 
-    all_stm_unique, all_stm_counts = np.unique(stm_sorted, return_counts=True) # 모든 trial type counting
+    all_stm_unique, all_stm_counts = np.unique(stm_sorted, return_counts=True) 
     stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
 
     rate_mean, _ = compute_mean_var_trial_collapse(stm_cnt_dict, rate_sorted)
     sample_mean = dc(rate_mean)
 
-    # MLE (maximum likelihood estimation)로 뉴런마다 parameter fitting
+    # MLE (maximum likelihood estimation) parameter fitting
     
     list_var_G_estim_neu = np.zeros((rate_sorted.shape[0], all_stm_unique.shape[0]))
     list_mu_estim_neu = np.zeros((rate_sorted.shape[0], all_stm_unique.shape[0]))
@@ -194,7 +194,7 @@ def compare_two_poissons(sess_ind):
             print(f'neu_ind2: {neu_ind} / {rate_sorted.shape[0]}, duration: {time.time() - start:.2f} sec')
             start = time.time()
 
-    # 변수 파일에 저장
+    # Save into a file
     filename = 'poisson_fit_rs_sep_ABO_' + str(sess_ind) + '.pickle'
     with open(filename, "wb") as f:
         # pickle.dump({'tree_variables': ['list_var_G_estim_neu', 'list_nLL_mod_cv', 'list_mu_estim_neu', 'sample_mean'],
@@ -205,7 +205,7 @@ def compare_two_poissons(sess_ind):
     print("Ended Process",c_proc.name)
 
 # %%
-# 변수 loading
+# loading variables
 
 # openscope
 with open('SVM_prerequisite_variables.pickle', 'rb') as f:

@@ -1,5 +1,5 @@
 # %%
-# from pynwb import NWBHDF5IO
+from pynwb import NWBHDF5IO
 from scipy.io import savemat, loadmat
 import mat73
 import h5py
@@ -95,33 +95,23 @@ def compute_mean_var_trial_collapse(label_cnt_dict, rate_sorted):
     return rate_sorted_mean, rate_sorted_var
 
 # %%
-# cosine similarity 계산 함수
+# Function to compute cosine similarity
 def cos_sim(x, y):
-    # x, y 각각 1d vector
+    # x and y are 1D vectors
 
-    # NaN 제거
+    # Remove NaN
     x, y = np.array(x), np.array(y)
     bool_notnan = np.logical_and(~np.isnan(x), ~np.isnan(y))
     x, y = x[bool_notnan].copy(), y[bool_notnan].copy()
 
-    return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
+    return np.dot(x, y) / (np.linalg.norm(x.astype(np.float32)) * np.linalg.norm(y.astype(np.float32)))
 
 # %%
-# column normalization 함수
+# Function for column normalization
 def normc(matrix):
-    '''matrix는 2D'''
+    '''For 2D matrix'''
 
-    # if isinstance(matrix, np.ndarray):
-    #     matrix_normalized = np.zeros_like(matrix)
-    #     for column_ind in range(matrix.shape[1]):
-    #         matrix_normalized[:, column_ind] = matrix[:, column_ind] / np.linalg.norm(matrix[:, column_ind])
-
-    # elif isinstance(matrix, pd.DataFrame):
-    #     matrix_normalized = pd.DataFrame(np.zeros_like(matrix), columns=matrix.columns, index=matrix.index)
-    #     for column_ind, column_name in enumerate(matrix.columns):
-    #         matrix_normalized.iloc[:, column_ind] = matrix.iloc[:, column_ind] / np.linalg.norm(matrix.iloc[:, column_ind])
-
-    matrix_normalized = matrix / np.linalg.norm(matrix, axis=0)
+    matrix_normalized = matrix / np.linalg.norm(matrix.astype(np.float32), axis=0)
 
     return matrix_normalized
 
@@ -135,16 +125,16 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
 
-    # n_sampling = 100 # 각 trial type에서 trial sampling할 횟수
+    # n_sampling = 100 # number of trial sampling for each stimulus
     num_trials = 50
     num_trial_types = 119
     num_sess = 32
 
     print(f'target slope {target_slope:.1f}')
 
-    # 모든 session에 대해 iteration
+    # Iterate over all sessions
 
-    np.random.seed(0) # as-is와 RRneuron의 trial 순서 & shuffling을 match하기 위해.
+    np.random.seed(0) # match trial order.
 
     list_RSM_mean_asis = np.zeros((num_sess, num_trial_types, num_trial_types))
     list_RSM_mean_RRneuron = np.zeros((num_sess, num_trial_types, num_trial_types))
@@ -159,15 +149,15 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
         # rate_sorted = rate.sort_index(axis=1)
         stm = rate.columns.copy()
 
-        # delta t 곱해서 spike count로 만들기
+        # Multiply by delta t to convert to spike counts
         rate = rate * 0.25
 
-        # stm type별 counting dictionary 제작
-        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) # 모든 trial type counting
+        # Create a counting dictionary for each stimulus
+        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
         stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
         
-        # 3D matrix로 만들기
-        min_num_trials = np.min(all_stm_counts) # session 4는 trial repeat 수가 균질하지 않으므로 최솟값만 취함 (참고: 47개)
+        # convert to 3D response matrix
+        min_num_trials = np.min(all_stm_counts) # session 4 has heterogeneous numbers of trials (minimum 47)
 
         list_rate_tt = [None] * num_trial_types
         for trial_type_ind, trial_type in enumerate(np.arange(-1, 118, 1).astype(int)):
@@ -186,24 +176,24 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
         # rate_shuf = np.zeros_like(rate_sorted)
         # for neu_ind in range(rate_sorted.shape[0]):
         #     shuf_inds = np.random.permutation(rate_sorted.shape[2])
-        #     rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() # transpose 주의!
+        #     rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
         # rate_sorted = rate_shuf.copy()
 
-        # trial 순서 re-randomization
+        # trial order re-randomization
         for trial_type_ind in range(num_trial_types):
             rate_sorted[:, trial_type_ind, :] = rate_sorted[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
 
         if slope_ind == 0:
 
-            # RSM 반복 제작
+            # repeat calculating similarity matrices
 
             if similarity_type == 'geodesic' or similarity_type == 'isomap':
                 rate_sorted_2d = np.reshape(rate_sorted, (-1, num_trial_types*min_num_trials))
 
                 # isomap
-                n_components = 1 # 목표 차원 수
-                # n_components = rate_sorted.shape[0] # 목표 차원 수
-                n_neighbors = 5 # 이웃 점 개수
+                n_components = 1 # target number of dimensions
+                # n_components = rate_sorted.shape[0] # target number of dimensions
+                n_neighbors = 5 # number of neighbors
 
                 isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
                 
@@ -227,13 +217,13 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
             for sampling_ind in range(n_sampling):
                 
                 if similarity_type == 'cos_sim':
-                    rate_sampled_trials1 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                    rate_sampled_trials1 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][0]]).copy() 
                     rate_sampled_trials2 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][1]]).copy()
 
-                    # RSM 제작
-                    RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
+                    # calculate similarity matrix
+                    RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
 
-                    # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) # lower triangle도 대칭으로 채우기
+                    # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
                     list_RSM[sampling_ind] = RSM.copy()
 
                 else:
@@ -250,25 +240,25 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
             RSM_mean = np.nanmean(list_RSM, axis=0) # nanmean!
             list_RSM_mean_asis[ind] = RSM_mean.copy()
 
-        # 평균이 0인 경우 NaN으로 바꾸기 (mean이 0인 경우와 var이 0인 경우가 정확히 일치하는 것을 이미 확인함.)
+        # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
         rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
         rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
 
-        # RRneuron
+        # Change slope
 
-        # RRneuron var 계산
+        # calculate target variance
         var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
 
         # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
-        # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed # 산술평균 유지
-        offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) # 기하평균 유지, dataframe.mean()은 default로 skipna=True
+        # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
+        offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) 
 
         var_rs_noisy = \
             pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
-                / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # broadcasting하려면 Series이거나 ndarray여야 함 # collapsed
+                / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # collapsed
         var_rs_noisy = np.repeat(np.squeeze(var_rs_noisy)[:, :, np.newaxis], min_num_trials, axis=2)
 
-        # rate residual RR 계산 & mean과 다시 합하기            
+        # Compute changed residual and add back to the mean            
         rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
         # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
         #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
@@ -276,23 +266,23 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
             * np.sqrt(var_rs_noisy)
         # print(rate_resid_RRneuron_dr)
         rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
-        rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # NaN을 다시 0으로 바꾸기!
+        rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!
 
         list_rate_RRneuron_dr[ind] = rate_RRneuron_dr.copy()
 
-        # # trial 순서 re-randomization
+        # # trial order re-randomization
         # for trial_type_ind in range(num_trial_types):
         #     rate_RRneuron_dr[:, trial_type_ind, :] = rate_RRneuron_dr[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
 
-        # RSM 반복 제작
+        # repeat calculating similarity matrices
 
         if similarity_type == 'geodesic' or similarity_type == 'isomap':
             rate_RRneuron_dr_2d = np.reshape(rate_RRneuron_dr, (-1, num_trial_types*min_num_trials))
 
             # isomap
-            n_components = 1 # 목표 차원 수
-            # n_components = rate_sorted.shape[0] # 목표 차원 수
-            n_neighbors = 5 # 이웃 점 개수
+            n_components = 1 # target number of dimensions
+            # n_components = rate_sorted.shape[0] # target number of dimensions
+            n_neighbors = 5 # number of neighbors
 
             isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
             
@@ -316,12 +306,12 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
         for sampling_ind in range(n_sampling):
             
             if similarity_type == 'cos_sim':
-                rate_sampled_trials1 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                rate_sampled_trials1 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][0]]).copy() 
                 rate_sampled_trials2 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][1]]).copy()
 
-                RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
+                RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
 
-                # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) # lower triangle도 대칭으로 채우기
+                # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
                 list_RSM[sampling_ind] = RSM.copy()
 
             else:
@@ -340,14 +330,14 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
 
     # Spearman correlation across session pairs
     sess_pairs = list(combinations(range(num_sess), 2))
-    list_corr_sesspair_asis = np.zeros((len(sess_pairs), 3)) # correlation 측정법 3가지
-    list_corr_sesspair = np.zeros((len(sess_pairs), 3)) # correlation 측정법 3가지
+    list_corr_sesspair_asis = np.zeros((len(sess_pairs), 3)) 
+    list_corr_sesspair = np.zeros((len(sess_pairs), 3)) 
     for pair_ind, pair in enumerate(sess_pairs):
         if slope_ind == 0:
             RSM_mean_neu1 = list_RSM_mean_asis[pair[0]].copy()
             RSM_mean_neu2 = list_RSM_mean_asis[pair[1]].copy()
 
-            list_corr_sesspair_asis[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic # 모두 NaN인 경우 nanmean 후에도 남아있을 수 있으므로.
+            list_corr_sesspair_asis[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
             bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
             list_corr_sesspair_asis[pair_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
             list_corr_sesspair_asis[pair_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
@@ -355,12 +345,12 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
         RSM_mean_neu1 = list_RSM_mean_RRneuron[pair[0]].copy()
         RSM_mean_neu2 = list_RSM_mean_RRneuron[pair[1]].copy()
 
-        list_corr_sesspair[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic # 모두 NaN인 경우 nanmean 후에도 남아있을 수 있으므로.
+        list_corr_sesspair[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
         bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
         list_corr_sesspair[pair_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
         list_corr_sesspair[pair_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
-    # 파일에 저장
+    # Save into a file
     filename = 'RSM_corr_sesspair_ABO_RSneu_' + similarity_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis', 'list_corr_sesspair_asis', 'list_rate_RRneuron_dr', 'list_RSM_mean_RRneuron', 'list_corr_sesspair'], \
@@ -380,7 +370,7 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
 
-    # n_sampling = 100 # 각 trial type에서 trial sampling할 횟수
+    # n_sampling = 100 # number of trial sampling for each stimulus
     num_trials = 50
     num_trial_types = 119
     num_sess = 32
@@ -399,7 +389,7 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
     list_corr_sesspair_HVA = {hva: 0 for hva in list_HVA_names}
     for area_ind, area in enumerate(list_HVA_names):
         
-        # 모든 session에 대해 iteration
+        # Iterate over all sessions
 
         list_RSM_mean_asis = np.full((num_sess, num_trial_types, num_trial_types), np.nan)
         list_RSM_mean_RRneuron = np.full((num_sess, num_trial_types, num_trial_types), np.nan)
@@ -411,20 +401,20 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
             print(f'area: {area}, ind: {ind}')
 
             rate = list_rate_all_HVA[area][ind].copy()
-            if np.any(rate) == True: # neuron이 있는 경우
+            if np.any(rate) == True: # if neurons exist
 
                 # rate_sorted = rate.sort_index(axis=1)
                 stm = rate.columns.copy()
 
-                # delta t 곱해서 spike count로 만들기
+                # Multiply by delta t to convert to spike counts
                 rate = rate * 0.25
 
-                # stm type별 counting dictionary 제작
-                all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) # 모든 trial type counting
+                # Create a counting dictionary for each stimulus
+                all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
                 stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
                 
-                # 3D matrix로 만들기
-                min_num_trials = np.min(all_stm_counts) # session 4는 trial repeat 수가 균질하지 않으므로 최솟값만 취함 (참고: 47개)
+                # convert to 3D response matrix
+                min_num_trials = np.min(all_stm_counts) # session 4 has heterogeneous numbers of trials (minimum 47)
 
                 list_rate_tt = [None] * num_trial_types
                 for trial_type_ind, trial_type in enumerate(np.arange(-1, 118, 1).astype(int)):
@@ -439,21 +429,21 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
                 
                 list_slopes_dr = list_slopes_all_an_loglog_HVA[area][ind].copy()
 
-                # trial 순서 re-randomization
+                # trial order re-randomization
                 for trial_type_ind in range(num_trial_types):
                     rate_sorted[:, trial_type_ind, :] = rate_sorted[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
 
                 if slope_ind == 0:
 
-                    # RSM 반복 제작
+                    # repeat calculating similarity matrices
 
                     if similarity_type == 'geodesic' or similarity_type == 'isomap':
                         rate_sorted_2d = np.reshape(rate_sorted, (-1, num_trial_types*min_num_trials))
 
                         # isomap
-                        n_components = 1 # 목표 차원 수
-                        # n_components = rate_sorted.shape[0] # 목표 차원 수
-                        n_neighbors = 5 # 이웃 점 개수
+                        n_components = 1 # target number of dimensions
+                        # n_components = rate_sorted.shape[0] # target number of dimensions
+                        n_neighbors = 5 # number of neighbors
 
                         isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
                         
@@ -477,13 +467,13 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
                     for sampling_ind in range(n_sampling):
                         
                         if similarity_type == 'cos_sim':
-                            rate_sampled_trials1 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                            rate_sampled_trials1 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][0]]).copy() 
                             rate_sampled_trials2 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][1]]).copy()
 
-                            # RSM 제작
-                            RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
+                            # calculate similarity matrix
+                            RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
 
-                            # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) # lower triangle도 대칭으로 채우기
+                            # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
                             list_RSM[sampling_ind] = RSM.copy()
 
                         else:
@@ -500,23 +490,23 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
                     RSM_mean = np.nanmean(list_RSM, axis=0) # nanmean!
                     list_RSM_mean_asis[ind] = RSM_mean.copy()
 
-                # 평균이 0인 경우 NaN으로 바꾸기 (mean이 0인 경우와 var이 0인 경우가 정확히 일치하는 것을 이미 확인함.)
+                # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
                 rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
                 rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
 
-                # RRneuron var 계산
+                # calculate target variance
                 var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
 
                 # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
-                # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed # 산술평균 유지
-                offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) # 기하평균 유지, dataframe.mean()은 default로 skipna=True
+                # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
+                offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) 
 
                 var_rs_noisy = \
                     pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
-                        / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # broadcasting하려면 Series이거나 ndarray여야 함 # collapsed
+                        / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # collapsed
                 var_rs_noisy = np.repeat(np.squeeze(var_rs_noisy)[:, :, np.newaxis], min_num_trials, axis=2)
 
-                # rate residual RR 계산 & mean과 다시 합하기            
+                # Compute changed residual and add back to the mean            
                 rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
                 # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
                 #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
@@ -524,22 +514,22 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
                     * np.sqrt(var_rs_noisy)
                 # print(rate_resid_RRneuron_dr)
                 rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
-                rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # NaN을 다시 0으로 바꾸기!      
+                rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!      
                 list_rate_RRneuron_dr[ind] = rate_RRneuron_dr.copy()
 
-                # # trial 순서 re-randomization
+                # # trial order re-randomization
                 # for trial_type_ind in range(num_trial_types):
                 #     rate_RRneuron_dr[:, trial_type_ind, :] = rate_RRneuron_dr[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
 
-                # RSM 반복 제작
+                # repeat calculating similarity matrices
 
                 if similarity_type == 'geodesic' or similarity_type == 'isomap':
                     rate_RRneuron_dr_2d = np.reshape(rate_RRneuron_dr, (-1, num_trial_types*min_num_trials))
 
                     # isomap
-                    n_components = 1 # 목표 차원 수
-                    # n_components = rate_sorted.shape[0] # 목표 차원 수
-                    n_neighbors = 5 # 이웃 점 개수
+                    n_components = 1 # target number of dimensions
+                    # n_components = rate_sorted.shape[0] # target number of dimensions
+                    n_neighbors = 5 # number of neighbors
 
                     isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
                     
@@ -563,13 +553,13 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
                 for sampling_ind in range(n_sampling):
                     
                     if similarity_type == 'cos_sim':
-                        rate_sampled_trials1 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                        rate_sampled_trials1 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][0]]).copy() 
                         rate_sampled_trials2 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][1]]).copy()
 
-                        # RSM 제작
-                        RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
+                        # calculate similarity matrix
+                        RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
 
-                        # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) # lower triangle도 대칭으로 채우기
+                        # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
                         list_RSM[sampling_ind] = RSM.copy()
 
                     else:
@@ -588,14 +578,14 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
 
         # Spearman correlation across session pairs
         sess_pairs = list(combinations(range(num_sess), 2))
-        list_corr_sesspair_asis = np.zeros((len(sess_pairs), 3)) # correlation 측정법 3가지
-        list_corr_sesspair = np.zeros((len(sess_pairs), 3)) # correlation 측정법 3가지
+        list_corr_sesspair_asis = np.zeros((len(sess_pairs), 3)) 
+        list_corr_sesspair = np.zeros((len(sess_pairs), 3)) 
         for pair_ind, pair in enumerate(sess_pairs):
             if slope_ind == 0:
                 RSM_mean_neu1 = list_RSM_mean_asis[pair[0]].copy()
                 RSM_mean_neu2 = list_RSM_mean_asis[pair[1]].copy()
 
-                list_corr_sesspair_asis[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic # 모두 NaN인 경우 nanmean 후에도 남아있을 수 있으므로.
+                list_corr_sesspair_asis[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
                 bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
                 list_corr_sesspair_asis[pair_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
                 list_corr_sesspair_asis[pair_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())                
@@ -603,7 +593,7 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
             RSM_mean_neu1 = list_RSM_mean_RRneuron[pair[0]].copy()
             RSM_mean_neu2 = list_RSM_mean_RRneuron[pair[1]].copy()
 
-            list_corr_sesspair[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic # 모두 NaN인 경우 nanmean 후에도 남아있을 수 있으므로.
+            list_corr_sesspair[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
             bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
             list_corr_sesspair[pair_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
             list_corr_sesspair[pair_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
@@ -615,7 +605,7 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type):
         list_rate_RRneuron_dr_HVA[area] = list_rate_RRneuron_dr.copy()
         list_corr_sesspair_HVA[area] = list_corr_sesspair.copy()
     
-    # 파일에 저장
+    # Save into a file
     filename = 'RSM_corr_sesspair_ABO_HVA_allneu_' + similarity_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis_HVA', 'list_corr_sesspair_asis_HVA', 'list_rate_RRneuron_dr_HVA', 'list_RSM_mean_RRneuron_HVA', 'list_corr_sesspair_HVA'],
@@ -634,7 +624,7 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
 
-    # n_sampling = 100 # 각 trial type에서 trial sampling할 횟수
+    # n_sampling = 100 # number of trial sampling for each stimulus
     num_trials = 50
     num_trial_types = 119
     num_sess = 32
@@ -642,12 +632,12 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
 
     print(f'target slope {target_slope:.1f}')
 
-    # 모든 session에 대해 iteration
-    np.random.seed(0) # as-is와 RRneuron, 모든 slope에 대해 뉴런 분할을 동일하게 하기 위함.
+    # Iterate over all sessions
+    np.random.seed(0) # match neuron partitioning
     # random.seed(0)
 
-    list_corr_withinsess_asis2 = np.full((num_sess, n_neu_sampling, 3), np.nan) # correlation 측정법 3가지
-    list_corr_withinsess2 = np.full((num_sess, n_neu_sampling, 3), np.nan) # correlation 측정법 3가지
+    list_corr_withinsess_asis2 = np.full((num_sess, n_neu_sampling, 3), np.nan) 
+    list_corr_withinsess2 = np.full((num_sess, n_neu_sampling, 3), np.nan) 
 
     for sess_ind in range(num_sess):
 
@@ -657,15 +647,15 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
         # rate_sorted = rate.sort_index(axis=1)
         stm = rate.columns.copy()
 
-        # delta t 곱해서 spike count로 만들기
+        # Multiply by delta t to convert to spike counts
         rate = rate * 0.25
 
-        # stm type별 counting dictionary 제작
-        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) # 모든 trial type counting
+        # Create a counting dictionary for each stimulus
+        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
         stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
         
-        # 3D matrix로 만들기
-        min_num_trials = np.min(all_stm_counts) # session 4는 trial repeat 수가 균질하지 않으므로 최솟값만 취함 (참고: 47개)
+        # convert to 3D response matrix
+        min_num_trials = np.min(all_stm_counts) # session 4 has heterogeneous numbers of trials (minimum 47)
 
         list_rate_tt = [None] * num_trial_types
         for trial_type_ind, trial_type in enumerate(np.arange(-1, 118, 1).astype(int)):
@@ -684,30 +674,30 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
         # rate_shuf = np.zeros_like(rate_sorted)
         # for neu_ind in range(rate_sorted.shape[0]):
         #     shuf_inds = np.random.permutation(rate_sorted.shape[2])
-        #     rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() # transpose 주의!
+        #     rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
         # rate_sorted = rate_shuf.copy()
 
-        # trial 순서 re-randomization
+        # trial order re-randomization
         for trial_type_ind in range(num_trial_types):
             rate_sorted[:, trial_type_ind, :] = rate_sorted[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
 
-        # 평균이 0인 경우 NaN으로 바꾸기 (mean이 0인 경우와 var이 0인 경우가 정확히 일치하는 것을 이미 확인함.)
+        # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
         rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
         rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
 
-        # RRneuron var 계산
+        # calculate target variance
         var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
 
         # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
-        # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed # 산술평균 유지
-        offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) # 기하평균 유지, dataframe.mean()은 default로 skipna=True
+        # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
+        offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) 
 
         var_rs_noisy = \
             pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
-                / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # broadcasting하려면 Series이거나 ndarray여야 함 # collapsed
+                / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # collapsed
         var_rs_noisy = np.repeat(np.squeeze(var_rs_noisy)[:, :, np.newaxis], min_num_trials, axis=2)
 
-        # rate residual RR 계산 & mean과 다시 합하기            
+        # Compute changed residual and add back to the mean            
         rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
         # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
         #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
@@ -715,36 +705,36 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
             * np.sqrt(var_rs_noisy)
         # print(rate_resid_RRneuron_dr)
         rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
-        rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # NaN을 다시 0으로 바꾸기!      
+        rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!      
 
-        # # trial 순서 re-randomization
+        # # trial order re-randomization
         # for trial_type_ind in range(num_trial_types):
         #     rate_RRneuron_dr[:, trial_type_ind, :] = rate_RRneuron_dr[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)] 
 
-        # 서로 다른 neuron division에 대해 iteration
+        # Iterate over neuron partitionings
         for neu_sample_ind in range(n_neu_sampling):
             print(f'neu_sample_ind = {neu_sample_ind}')
             
-            # neuron 분할
+            # Partition neurons
             neu_inds_permuted = np.random.permutation(range(rate_sorted.shape[0]))
-            neu_div_inds1 = neu_inds_permuted[:int(rate_sorted.shape[0]/2)].copy() # 5:5 분할 (참고: int는 버림이다)
+            neu_div_inds1 = neu_inds_permuted[:int(rate_sorted.shape[0]/2)].copy() # 5:5 partitioning
             neu_div_inds2 = neu_inds_permuted[int(rate_sorted.shape[0]/2):].copy()
-            if neu_div_inds2.shape[0] > neu_div_inds1.shape[0]: # 이 세션의 뉴런 개수가 홀수일 경우
+            if neu_div_inds2.shape[0] > neu_div_inds1.shape[0]: # if num_neurons is odd number
                 neu_div_inds2 = neu_div_inds2[:-1].copy()
 
             # as-is
 
             if slope_ind == 0:
 
-                # RSM 반복 제작
+                # repeat calculating similarity matrices
                 
                 if similarity_type == 'geodesic' or similarity_type == 'euclidean':
                     rate_sorted_2d = np.reshape(rate_sorted, (-1, num_trial_types*num_trials))
 
                     # isomap
-                    n_components = 1 # 목표 차원 수
-                    # n_components = rate_sorted.shape[0] # 목표 차원 수
-                    n_neighbors = 10 # 이웃 점 개수
+                    n_components = 1 # target number of dimensions
+                    # n_components = rate_sorted.shape[0] # target number of dimensions
+                    n_neighbors = 10 # number of neighbors
 
                     isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
                     
@@ -757,7 +747,7 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
                 # n_neurons x n_stimuli 2D matrix sampling
                 
                 tt_pairs = list(combinations(range(min_num_trials), 2))
-                # random.shuffle(tt_pairs) # 10000개만 사용될 것이므로 편향이 없게끔 랜덤화.
+                # random.shuffle(tt_pairs) 
                 n_sampling = np.min([len(tt_pairs), 10000])
                 # n_sampling = len(tt_pairs)
 
@@ -769,13 +759,13 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
                     
                     if similarity_type == 'cos_sim':
 
-                        rate_sampled_trials1_1 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                        rate_sampled_trials1_1 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
                         rate_sampled_trials1_2 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
-                        rate_sampled_trials2_1 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                        rate_sampled_trials2_1 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
                         rate_sampled_trials2_2 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
 
-                        RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
-                        RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
+                        RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
+                        RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
 
                         list_RSM_neu1[sampling_ind] = RSM1.copy()
                         list_RSM_neu2[sampling_ind] = RSM2.copy()
@@ -787,24 +777,24 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
                         RSM = dist_matrix[row_inds, :][:, col_inds].copy()
                         list_RSM[sampling_ind] = RSM.copy()
 
-                RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # trial sampling에 대해 평균 내기
+                RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # Average across trial samplings
                 RSM_mean_neu2 = np.nanmean(list_RSM_neu2, axis=0)
-                list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic # 모두 NaN인 경우 nanmean 후에도 남아있을 수 있으므로.
+                list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
                 bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
                 list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
                 list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
         
-            # RRneuron
+            # Change slope
 
-            # RSM 반복 제작
+            # repeat calculating similarity matrices
             
             if similarity_type == 'geodesic' or similarity_type == 'euclidean':
                 rate_RRneuron_dr_2d = np.reshape(rate_RRneuron_dr, (-1, num_trial_types*num_trials))
 
                 # isomap
-                n_components = 1 # 목표 차원 수
-                # n_components = rate_sorted.shape[0] # 목표 차원 수
-                n_neighbors = 10 # 이웃 점 개수
+                n_components = 1 # target number of dimensions
+                # n_components = rate_sorted.shape[0] # target number of dimensions
+                n_neighbors = 10 # number of neighbors
 
                 isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
                 
@@ -817,7 +807,7 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
             # n_neurons x n_stimuli 2D matrix sampling
             
             tt_pairs = list(combinations(range(min_num_trials), 2))
-            # random.shuffle(tt_pairs) # 10000개만 사용될 것이므로 편향이 없게끔 랜덤화.
+            # random.shuffle(tt_pairs) 
             n_sampling = np.min([len(tt_pairs), 10000])
             # n_sampling = len(tt_pairs)
 
@@ -828,15 +818,15 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
             for sampling_ind in range(n_sampling):
                 
                 if similarity_type == 'cos_sim':
-                    rate_sampled_trials1_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                    rate_sampled_trials1_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
                     rate_sampled_trials1_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
-                    rate_sampled_trials2_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                    rate_sampled_trials2_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
                     rate_sampled_trials2_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
 
-                    RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
-                    RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
+                    RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
+                    RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
 
-                    # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) # lower triangle도 대칭으로 채우기
+                    # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
                     list_RSM_neu1[sampling_ind] = RSM1.copy()
                     list_RSM_neu2[sampling_ind] = RSM2.copy()
 
@@ -851,14 +841,14 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type):
                 if count % 1000 == 0:
                     print(f'count: {count}')
 
-            RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # trial sampling에 대해 평균 내기
+            RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # Average across trial samplings
             RSM_mean_neu2 = np.nanmean(list_RSM_neu2, axis=0)
-            list_corr_withinsess2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic # 모두 NaN인 경우 nanmean 후에도 남아있을 수 있으므로.
+            list_corr_withinsess2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
             bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
             list_corr_withinsess2[sess_ind, neu_sample_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
             list_corr_withinsess2[sess_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
-    # 파일에 저장
+    # Save into a file
     filename = 'RSM_corr_withinsess_ABO_' + similarity_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis2', 'list_corr_withinsess2'], \
@@ -876,7 +866,7 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
 
-    # n_sampling = 100 # 각 trial type에서 trial sampling할 횟수
+    # n_sampling = 100 # number of trial sampling for each stimulus
     num_trials = 50
     num_trial_types = 119
     num_sess = 32
@@ -884,7 +874,7 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
 
     print(f'target slope {target_slope:.1f}')
 
-    np.random.seed(0) # as-is와 RRneuron, 모든 slope에 대해 뉴런 분할을 동일하게 하기 위함.
+    np.random.seed(0) # match neuron partitioning
     # random.seed(0)
 
     list_HVA_names = ['VISl', 'VISrl', 'VISal', 'VISpm', 'VISam']
@@ -893,30 +883,30 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
     list_corr_withinsess_HVA = {hva: np.empty(0, dtype=object) for hva in list_HVA_names}
     for area_ind, area in enumerate(list_HVA_names):
                 
-        # 모든 session에 대해 iteration
+        # Iterate over all sessions
 
-        list_corr_withinsess_asis2 = np.full((num_sess, n_neu_sampling, 3), np.nan) # correlation 측정법 3가지
-        list_corr_withinsess2 = np.full((num_sess, n_neu_sampling, 3), np.nan) # correlation 측정법 3가지
+        list_corr_withinsess_asis2 = np.full((num_sess, n_neu_sampling, 3), np.nan) 
+        list_corr_withinsess2 = np.full((num_sess, n_neu_sampling, 3), np.nan) 
 
         for sess_ind in range(num_sess):
 
             # print(f'area: {area}, sess_ind: {sess_ind}')
 
             rate = list_rate_all_HVA[area][sess_ind].copy()
-            if np.any(rate) == True: # neuron이 있는 경우
+            if np.any(rate) == True: # if neurons exist
 
                 # rate_sorted = rate.sort_index(axis=1)
                 stm = rate.columns.copy()
 
-                # delta t 곱해서 spike count로 만들기
+                # Multiply by delta t to convert to spike counts
                 rate = rate * 0.25
 
-                # stm type별 counting dictionary 제작
-                all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) # 모든 trial type counting
+                # Create a counting dictionary for each stimulus
+                all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
                 stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
                 
-                # 3D matrix로 만들기
-                min_num_trials = np.min(all_stm_counts) # session 4는 trial repeat 수가 균질하지 않으므로 최솟값만 취함 (참고: 47개)
+                # convert to 3D response matrix
+                min_num_trials = np.min(all_stm_counts) # session 4 has heterogeneous numbers of trials (minimum 47)
 
                 list_rate_tt = [None] * num_trial_types
                 for trial_type_ind, trial_type in enumerate(np.arange(-1, 118, 1).astype(int)):
@@ -935,30 +925,30 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
                 rate_shuf = np.zeros_like(rate_sorted)
                 for neu_ind in range(rate_sorted.shape[0]):
                     shuf_inds = np.random.permutation(rate_sorted.shape[2])
-                    rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() # transpose 주의!
+                    rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
                 # rate_sorted = rate_shuf.copy()
 
-                # trial 순서 re-randomization
+                # trial order re-randomization
                 for trial_type_ind in range(num_trial_types):
                     rate_sorted[:, trial_type_ind, :] = rate_sorted[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
 
-                # 평균이 0인 경우 NaN으로 바꾸기 (mean이 0인 경우와 var이 0인 경우가 정확히 일치하는 것을 이미 확인함.)
+                # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
                 rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
                 rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
 
-                # RRneuron var 계산
+                # calculate target variance
                 var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
 
                 # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
-                # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed # 산술평균 유지
-                offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) # 기하평균 유지, dataframe.mean()은 default로 skipna=True
+                # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
+                offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) 
 
                 var_rs_noisy = \
                     pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
-                        / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # broadcasting하려면 Series이거나 ndarray여야 함 # collapsed
+                        / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # collapsed
                 var_rs_noisy = np.repeat(np.squeeze(var_rs_noisy)[:, :, np.newaxis], min_num_trials, axis=2)
 
-                # rate residual RR 계산 & mean과 다시 합하기            
+                # Compute changed residual and add back to the mean            
                 rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
                 # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
                 #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
@@ -966,36 +956,36 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
                     * np.sqrt(var_rs_noisy)
                 # print(rate_resid_RRneuron_dr)
                 rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
-                rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # NaN을 다시 0으로 바꾸기!      
+                rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!      
 
-                # # trial 순서 re-randomization
+                # # trial order re-randomization
                 # for trial_type_ind in range(num_trial_types):
                 #     rate_RRneuron_dr[:, trial_type_ind, :] = rate_RRneuron_dr[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)] 
 
-                # 서로 다른 neuron division에 대해 iteration
+                # Iterate over neuron partitionings
                 for neu_sample_ind in range(n_neu_sampling):
                     print(f'area: {area}, sess_ind: {sess_ind}, neu_sample_ind = {neu_sample_ind}')
                     
-                    # neuron 분할
+                    # Partition neurons
                     neu_inds_permuted = np.random.permutation(range(rate_sorted.shape[0]))
-                    neu_div_inds1 = neu_inds_permuted[:int(rate_sorted.shape[0]/2)].copy() # 5:5 분할 (참고: int는 버림이다)
+                    neu_div_inds1 = neu_inds_permuted[:int(rate_sorted.shape[0]/2)].copy() # 5:5 partitioning
                     neu_div_inds2 = neu_inds_permuted[int(rate_sorted.shape[0]/2):].copy()
-                    if neu_div_inds2.shape[0] > neu_div_inds1.shape[0]: # 이 세션의 뉴런 개수가 홀수일 경우
+                    if neu_div_inds2.shape[0] > neu_div_inds1.shape[0]: # if num_neurons is odd number
                         neu_div_inds2 = neu_div_inds2[:-1].copy()
 
                     # as-is
 
                     if slope_ind == 0:
 
-                        # RSM 반복 제작
+                        # repeat calculating similarity matrices
                         
                         if similarity_type == 'geodesic' or similarity_type == 'euclidean':
                             rate_sorted_2d = np.reshape(rate_sorted, (-1, num_trial_types*num_trials))
 
                             # isomap
-                            n_components = 1 # 목표 차원 수
-                            # n_components = rate_sorted.shape[0] # 목표 차원 수
-                            n_neighbors = 10 # 이웃 점 개수
+                            n_components = 1 # target number of dimensions
+                            # n_components = rate_sorted.shape[0] # target number of dimensions
+                            n_neighbors = 10 # number of neighbors
 
                             isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
                             
@@ -1008,7 +998,7 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
                         # n_neurons x n_stimuli 2D matrix sampling
                         
                         tt_pairs = list(combinations(range(min_num_trials), 2))
-                        # random.shuffle(tt_pairs) # 10000개만 사용될 것이므로 편향이 없게끔 랜덤화.
+                        # random.shuffle(tt_pairs) 
                         n_sampling = np.min([len(tt_pairs), 10000])
                         # n_sampling = len(tt_pairs)
 
@@ -1020,13 +1010,13 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
                             
                             if similarity_type == 'cos_sim':
 
-                                rate_sampled_trials1_1 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                                rate_sampled_trials1_1 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
                                 rate_sampled_trials1_2 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
-                                rate_sampled_trials2_1 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                                rate_sampled_trials2_1 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
                                 rate_sampled_trials2_2 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
 
-                                RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
-                                RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
+                                RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
+                                RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
 
                                 list_RSM_neu1[sampling_ind] = RSM1.copy()
                                 list_RSM_neu2[sampling_ind] = RSM2.copy()
@@ -1038,24 +1028,24 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
                                 RSM = dist_matrix[row_inds, :][:, col_inds].copy()
                                 list_RSM[sampling_ind] = RSM.copy()
 
-                        RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # trial sampling에 대해 평균 내기
+                        RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # Average across trial samplings
                         RSM_mean_neu2 = np.nanmean(list_RSM_neu2, axis=0)
-                        list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic # 모두 NaN인 경우 nanmean 후에도 남아있을 수 있으므로.
+                        list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
                         bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
                         list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
                         list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
                 
-                    # RRneuron
+                    # Change slope
 
-                    # RSM 반복 제작
+                    # repeat calculating similarity matrices
                     
                     if similarity_type == 'geodesic' or similarity_type == 'euclidean':
                         rate_RRneuron_dr_2d = np.reshape(rate_RRneuron_dr, (-1, num_trial_types*num_trials))
 
                         # isomap
-                        n_components = 1 # 목표 차원 수
-                        # n_components = rate_sorted.shape[0] # 목표 차원 수
-                        n_neighbors = 10 # 이웃 점 개수
+                        n_components = 1 # target number of dimensions
+                        # n_components = rate_sorted.shape[0] # target number of dimensions
+                        n_neighbors = 10 # number of neighbors
 
                         isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
                         
@@ -1068,7 +1058,7 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
                     # n_neurons x n_stimuli 2D matrix sampling
                     
                     tt_pairs = list(combinations(range(min_num_trials), 2))
-                    # random.shuffle(tt_pairs) # 10000개만 사용될 것이므로 편향이 없게끔 랜덤화.
+                    # random.shuffle(tt_pairs) 
                     n_sampling = np.min([len(tt_pairs), 10000])
                     # n_sampling = len(tt_pairs)
 
@@ -1079,15 +1069,15 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
                     for sampling_ind in range(n_sampling):
                         
                         if similarity_type == 'cos_sim':
-                            rate_sampled_trials1_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                            rate_sampled_trials1_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
                             rate_sampled_trials1_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
-                            rate_sampled_trials2_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() # np.squeeze도 deepcopy 필수!
+                            rate_sampled_trials2_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
                             rate_sampled_trials2_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
 
-                            RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
-                            RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) # 각 trial vector를 단위벡터로 만들고 내적하면 cosine similarity!
+                            RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
+                            RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
 
-                            # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) # lower triangle도 대칭으로 채우기
+                            # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
                             list_RSM_neu1[sampling_ind] = RSM1.copy()
                             list_RSM_neu2[sampling_ind] = RSM2.copy()
 
@@ -1102,9 +1092,9 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
                         if count % 1000 == 0:
                             print(f'count: {count}')
 
-                    RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # trial sampling에 대해 평균 내기
+                    RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # Average across trial samplings
                     RSM_mean_neu2 = np.nanmean(list_RSM_neu2, axis=0)
-                    list_corr_withinsess2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic # 모두 NaN인 경우 nanmean 후에도 남아있을 수 있으므로.
+                    list_corr_withinsess2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
                     bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
                     list_corr_withinsess2[sess_ind, neu_sample_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
                     list_corr_withinsess2[sess_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
@@ -1112,7 +1102,7 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
         list_corr_withinsess_asis_HVA[area] = list_corr_withinsess_asis2.copy()
         list_corr_withinsess_HVA[area] = list_corr_withinsess2.copy()
 
-    # 파일에 저장
+    # Save into a file
     filename = 'RSM_corr_withinsess_ABO_HVA_' + similarity_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis_HVA', 'list_corr_withinsess_HVA'], \
@@ -1124,9 +1114,9 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type):
 # decoding (ABO)
 def decode_ABO(sess_ind, decoder_type):
 
-    ''' decoder_type is SVM, logit, Bayesian, RF, kNN '''
+    ''' decoder_type is SVM, logit,, RF, kNN '''
 
-    # warning 출력 막기
+    # ignore warnings
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
 
@@ -1143,7 +1133,7 @@ def decode_ABO(sess_ind, decoder_type):
 
         np.random.seed(0)
 
-        all_stimuli = np.arange(-1, 118, 1).astype(int) # grayscreen 포함
+        all_stimuli = np.arange(-1, 118, 1).astype(int) # include grayscreen trials
         probe_stimuli = np.array([5, 12, 24, 34, 36, 44, 47, 78, 83, 87, 104, 111, 114, 115])
         # train_stimuli = all_stimuli[~np.isin(all_stimuli, probe_stimuli)].copy()
         train_stimuli = all_stimuli.copy()
@@ -1155,15 +1145,15 @@ def decode_ABO(sess_ind, decoder_type):
         # rate_sorted = rate.sort_index(axis=1)
         stm = rate.columns.copy()
 
-        # delta t 곱해서 spike count로 만들기
+        # Multiply by delta t to convert to spike counts
         rate = rate * 0.25
 
-        # stm type별 counting dictionary 제작
-        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) # 모든 trial type counting
+        # Create a counting dictionary for each stimulus
+        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
         stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
         
-        # 3D matrix로 만들기
-        min_num_trials = np.min(all_stm_counts) # session 4는 trial repeat 수가 균질하지 않으므로 최솟값만 취함 (참고: 47개)
+        # convert to 3D response matrix
+        min_num_trials = np.min(all_stm_counts) # session 4 has heterogeneous numbers of trials (minimum 47)
 
         list_rate_tt = [None] * num_trial_types
         for trial_type_ind, trial_type in enumerate(all_stimuli):
@@ -1176,17 +1166,17 @@ def decode_ABO(sess_ind, decoder_type):
         # rate_shuf = np.zeros_like(rate_sorted)
         # for neu_ind in range(rate_sorted.shape[0]):
         #     shuf_inds = np.random.permutation(rate_sorted.shape[2])
-        #     rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() # transpose 주의!
+        #     rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
         # rate_sorted = rate_shuf.copy()
 
-        # trial type별 mean & variance 계산
+        # Compute mean & variance for each stimulus
         rate_sorted_mean_coll, rate_sorted_var_coll = np.mean(rate_sorted, axis=2), np.var(rate_sorted, axis=2, ddof=1)
         rate_sorted_mean, rate_sorted_var = np.repeat(rate_sorted_mean_coll[:, :, np.newaxis], min_num_trials, axis=2), \
             np.repeat(rate_sorted_var_coll[:, :, np.newaxis], min_num_trials, axis=2)
 
         list_slopes_dr = list_slopes_all_an_loglog[sess_ind].copy()
 
-        # trial 순서 re-randomization
+        # trial order re-randomization
         for trial_type_ind in range(num_trial_types):
             rate_sorted[:, trial_type_ind, :] = rate_sorted[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
         
@@ -1194,7 +1184,7 @@ def decode_ABO(sess_ind, decoder_type):
         kfold = KFold(n_splits=n_splits)
         stkfold = StratifiedKFold(n_splits=n_splits)
 
-        # 각 trial type 추출
+        # Re-convert to 2D response matrix
         label_train = np.repeat(all_stimuli, min_num_trials)
         rate_train = pd.DataFrame(rate_sorted.reshape(rate_sorted.shape[0], -1), columns=label_train)
         
@@ -1208,7 +1198,7 @@ def decode_ABO(sess_ind, decoder_type):
         if decoder_type in ['SVM', 'logit', 'RF', 'kNN']:
 
             for split_ind, (train_index, test_index) in enumerate(stkfold.split(rate_train.T, label_train)):
-                X_train, X_test = rate_train.T.iloc[train_index].copy(), rate_train.T.iloc[test_index].copy() # train, test data/label 선언
+                X_train, X_test = rate_train.T.iloc[train_index].copy(), rate_train.T.iloc[test_index].copy() # train, test data/label
                 y_train, y_test = label_train[train_index].copy(), label_train[test_index].copy()
 
                 mean_ = X_train.mean(axis=0)
@@ -1216,19 +1206,19 @@ def decode_ABO(sess_ind, decoder_type):
                 X_test = X_test.sub(mean_, axis=1)
 
                 if decoder_type == 'SVM':
-                    clf = svm.SVC(kernel='linear', max_iter=-1)
+                    clf = svm.SVC(kernel='linear', max_iter=100)
                 elif decoder_type == 'logit':
                     clf = logit(max_iter=100) # default: L2 regularization, lbfgs solver, C=1
                 elif decoder_type == 'RF':
                     clf = rf()
                 elif decoder_type == 'kNN':
-                    clf = KNeighborsClassifier(n_neighbors=30) # 저차원 데이터의 rule of thumb은 root of sample number, 고차원 데이터는 더 작은 값이 좋으므로 50 이내의 값 추천 받음. (GPT) 
+                    clf = KNeighborsClassifier(n_neighbors=30)  
                                 
                 clf.fit(X_train, y_train) # SVC fitting to train data
                 
-                y_test_pred = clf.predict(X_test) # test data에 대한 predicted label
+                y_test_pred = clf.predict(X_test) # predicted label for test data
 
-                # normalized test confusion matrix/test accuracy를 list에 추가
+                # record normalized test confusion matrix/test accuracy
                 test_confusion_matrix = confusion_matrix(y_test, y_test_pred)
                 test_confusion_matrix = test_confusion_matrix / np.sum(test_confusion_matrix, axis=1, keepdims=True)
                 list_confusion_test[split_ind] = test_confusion_matrix.copy()
@@ -1239,7 +1229,7 @@ def decode_ABO(sess_ind, decoder_type):
             
                 # print(f'split_ind {split_ind}')
 
-        # cross-validation average test confusion matrix/test accuracy 계산
+        # calculate cross-validation average test confusion matrix/test accuracy
         mean_confusion_test_asis = sum(list_confusion_test) / n_splits
         mean_confusion_test_asis = pd.DataFrame(mean_confusion_test_asis, columns=train_stimuli, index=train_stimuli).fillna(0)
         # print(mean_confusion_test.round(3))
@@ -1247,7 +1237,7 @@ def decode_ABO(sess_ind, decoder_type):
         mean_accuracy_asis = np.mean(list_accuracy)
         # print(round(mean_accuracy, ndigits=3))
 
-        # RRneuron
+        # Change slope
         list_mean_confusion_test_RRneuron = np.full((len(list_target_slopes), len(train_stimuli), len(train_stimuli)), np.nan)
         list_mean_accuracy_RRneuron = np.full(len(list_target_slopes), np.nan)
 
@@ -1256,23 +1246,23 @@ def decode_ABO(sess_ind, decoder_type):
 
             print(f'sess_ind: {sess_ind}, target slope {target_slope:.1f}')
                                 
-            # 평균이 0인 경우 NaN으로 바꾸기 (mean이 0인 경우와 var이 0인 경우가 정확히 일치하는 것을 이미 확인함.)
+            # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
             rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
             rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
 
-            # RRneuron var 계산
+            # calculate target variance
             var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
 
             # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
-            # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed # 산술평균 유지
-            offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) # 기하평균 유지, dataframe.mean()은 default로 skipna=True
+            # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
+            offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) 
 
             var_rs_noisy = \
                 pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
-                    / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # broadcasting하려면 Series이거나 ndarray여야 함 # collapsed
+                    / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # collapsed
             var_rs_noisy = np.repeat(np.squeeze(var_rs_noisy)[:, :, np.newaxis], min_num_trials, axis=2)
 
-            # rate residual RR 계산 & mean과 다시 합하기
+            # Compute changed residual and add back to the mean
             rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
             # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
             #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
@@ -1280,15 +1270,15 @@ def decode_ABO(sess_ind, decoder_type):
                 * np.sqrt(var_rs_noisy)
             # print(rate_resid_RRneuron_dr)
             rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
-            rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # NaN을 다시 0으로 바꾸기!        
+            rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!        
 
-            # # trial 순서 re-randomization
+            # # trial order re-randomization
             # for trial_type_ind in range(num_trial_types):
             #     rate_RRneuron_dr[:, trial_type_ind, :] = rate_RRneuron_dr[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
             
             # decoding cross-validation (RRneuron)  
 
-            # 각 trial type 추출
+            # Re-convert to 2D response matrix
             label_train_RRneuron = np.repeat(all_stimuli, min_num_trials)
             rate_train_RRneuron = pd.DataFrame(rate_RRneuron_dr.reshape(rate_RRneuron_dr.shape[0], -1), columns=label_train_RRneuron)
             
@@ -1302,7 +1292,7 @@ def decode_ABO(sess_ind, decoder_type):
             if decoder_type in ['SVM', 'logit', 'RF', 'kNN']:
 
                 for split_ind, (train_index, test_index) in enumerate(stkfold.split(rate_train_RRneuron.T, label_train_RRneuron)):
-                    X_train, X_test = rate_train_RRneuron.T.iloc[train_index].copy(), rate_train_RRneuron.T.iloc[test_index].copy() # train, test data/label 선언
+                    X_train, X_test = rate_train_RRneuron.T.iloc[train_index].copy(), rate_train_RRneuron.T.iloc[test_index].copy() # train, test data/label
                     y_train, y_test = label_train_RRneuron[train_index].copy(), label_train_RRneuron[test_index].copy()
 
                     mean_ = X_train.mean(axis=0)
@@ -1310,19 +1300,19 @@ def decode_ABO(sess_ind, decoder_type):
                     X_test = X_test.sub(mean_, axis=1)
 
                     if decoder_type == 'SVM':
-                        clf = svm.SVC(kernel='linear', max_iter=-1)
+                        clf = svm.SVC(kernel='linear', max_iter=100)
                     elif decoder_type == 'logit':
                         clf = logit(max_iter=100) # default: L2 regularization, lbfgs solver, C=1
                     elif decoder_type == 'RF':
                         clf = rf()
                     elif decoder_type == 'kNN':
-                        clf = KNeighborsClassifier(n_neighbors=30) # 저차원 데이터의 rule of thumb은 root of sample number, 고차원 데이터는 더 작은 값이 좋으므로 50 이내의 값 추천 받음. (GPT)
+                        clf = KNeighborsClassifier(n_neighbors=30) 
                                         
                     clf.fit(X_train, y_train) # SVC fitting to train data
                     
-                    y_test_pred = clf.predict(X_test) # test data에 대한 predicted label
+                    y_test_pred = clf.predict(X_test) # predicted label for test data
 
-                    # normalized test confusion matrix/test accuracy를 list에 추가
+                    # record normalized test confusion matrix/test accuracy
                     test_confusion_matrix = confusion_matrix(y_test, y_test_pred)
                     test_confusion_matrix = test_confusion_matrix / np.sum(test_confusion_matrix, axis=1, keepdims=True)
                     list_confusion_test[split_ind] = test_confusion_matrix.copy()
@@ -1333,7 +1323,7 @@ def decode_ABO(sess_ind, decoder_type):
                                                 
                     # print(f'split_ind {split_ind}')
 
-            # cross-validation average test confusion matrix/test accuracy 계산
+            # calculate cross-validation average test confusion matrix/test accuracy
             mean_confusion_test = sum(list_confusion_test) / n_splits
             mean_confusion_test = pd.DataFrame(mean_confusion_test, columns=train_stimuli, index=train_stimuli).fillna(0)
             # print(mean_confusion_test_Bayes.round(3))
@@ -1345,7 +1335,7 @@ def decode_ABO(sess_ind, decoder_type):
 
             print(f'sess_ind: {sess_ind}, target slope {target_slope:.1f}, duration {(time()-start_time)/60:.2f} min')
 
-    # 파일에 저장
+    # Save into a file
     filename = decoder_type + '_decoding_ABO_allstim_' + str(sess_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['mean_confusion_test_asis', 'mean_accuracy_asis', 'list_mean_confusion_test_RRneuron', 'list_mean_accuracy_RRneuron'],
@@ -1358,7 +1348,7 @@ def decode_ABO(sess_ind, decoder_type):
 # decoding (ABO, HVA)
 def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
 
-    ''' decoder_type is SVM or Bayesian '''
+    ''' decoder_type is SVM or '''
 
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
@@ -1369,9 +1359,9 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
     n_splits = 10
     t_win = 0.25
 
-    np.random.seed(0) # as-is와 RRneuron의 뉴런 분할 & 모든 slope의 뉴런 분할을 동일하게 하기 위함.
+    np.random.seed(0) # match neuron partitioning.
 
-    all_stimuli = np.arange(-1, 118, 1).astype(int) # grayscreen 포함
+    all_stimuli = np.arange(-1, 118, 1).astype(int) # include grayscreen trials
     probe_stimuli = np.array([5, 12, 24, 34, 36, 44, 47, 78, 83, 87, 104, 111, 114, 115])
     # train_stimuli = all_stimuli[~np.isin(all_stimuli, probe_stimuli)].copy()
     train_stimuli = all_stimuli.copy()
@@ -1386,7 +1376,7 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
 
     for area_ind, area in enumerate(list_HVA_names):
 
-        # 모든 session에 대해 iteration
+        # Iterate over all sessions
 
         list_mean_confusion_test = []
         list_mean_accuracy = []
@@ -1402,15 +1392,15 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
             if np.any(rate) == True: # neuron이 있을 때
                 stm = rate.columns.copy()
 
-                # delta t 곱해서 spike count로 만들기
+                # Multiply by delta t to convert to spike counts
                 rate = rate * 0.25
 
-                # stm type별 counting dictionary 제작
-                all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) # 모든 trial type counting
+                # Create a counting dictionary for each stimulus
+                all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
                 stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
                 
-                # 3D matrix로 만들기
-                min_num_trials = np.min(all_stm_counts) # session 4는 trial repeat 수가 균질하지 않으므로 최솟값만 취함 (참고: 47개)
+                # convert to 3D response matrix
+                min_num_trials = np.min(all_stm_counts) # session 4 has heterogeneous numbers of trials (minimum 47)
 
                 list_rate_tt = [None] * num_trial_types
                 for trial_type_ind, trial_type in enumerate(all_stimuli):
@@ -1419,14 +1409,14 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
                 rate = np.stack(list_rate_tt, axis=2)
                 rate_sorted = np.transpose(rate, (0, 2, 1)) # num_neurons x num_trial_types x min_num_trials
 
-                # trial type별 mean & variance 계산
+                # Compute mean & variance for each stimulus
                 rate_sorted_mean_coll, rate_sorted_var_coll = np.mean(rate_sorted, axis=2), np.var(rate_sorted, axis=2, ddof=1)
                 rate_sorted_mean, rate_sorted_var = np.repeat(rate_sorted_mean_coll[:, :, np.newaxis], min_num_trials, axis=2), \
                     np.repeat(rate_sorted_var_coll[:, :, np.newaxis], min_num_trials, axis=2)
 
                 list_slopes_dr = list_slopes_all_an_loglog_HVA[area][sess_ind].copy()
 
-                # trial 순서 re-randomization
+                # trial order re-randomization
                 for trial_type_ind in range(num_trial_types):
                     rate_sorted[:, trial_type_ind, :] = rate_sorted[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
                 
@@ -1434,10 +1424,9 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
                 kfold = KFold(n_splits=n_splits)
                 stkfold = StratifiedKFold(n_splits=n_splits)
                 
-                # slope 하나에서만 as-is도 계산
                 if slope_ind == 0:
 
-                    # 각 trial type 추출
+                    # Re-convert to 2D response matrix
                     label_train = np.repeat(all_stimuli, min_num_trials)
                     rate_train = pd.DataFrame(rate_sorted.reshape(rate_sorted.shape[0], -1), columns=label_train)
                     
@@ -1450,7 +1439,7 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
 
                     if decoder_type == 'SVM':
                         for split_ind, (train_index, test_index) in enumerate(stkfold.split(rate_train.T, label_train)):
-                            X_train, X_test = rate_train.T.iloc[train_index].copy(), rate_train.T.iloc[test_index].copy() # train, test data/label 선언
+                            X_train, X_test = rate_train.T.iloc[train_index].copy(), rate_train.T.iloc[test_index].copy() # train, test data/label
                             y_train, y_test = label_train[train_index].copy(), label_train[test_index].copy()
 
                             mean_ = X_train.mean(axis=0)
@@ -1463,9 +1452,9 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
                             
                             clf_SVC.fit(X_train, y_train) # SVC fitting to train data
                             
-                            y_test_pred_SVC = clf_SVC.predict(X_test) # test data에 대한 predicted label
+                            y_test_pred_SVC = clf_SVC.predict(X_test) # predicted label for test data
 
-                            # normalized test confusion matrix/test accuracy를 list에 추가
+                            # record normalized test confusion matrix/test accuracy
                             test_confusion_matrix = confusion_matrix(y_test, y_test_pred_SVC)
                             test_confusion_matrix = test_confusion_matrix / np.sum(test_confusion_matrix, axis=1, keepdims=True)
                             list_confusion_test.append(test_confusion_matrix)
@@ -1476,7 +1465,7 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
                         
                             # print(f'split_ind {split_ind}')
 
-                    # cross-validation average test confusion matrix/test accuracy 계산
+                    # calculate cross-validation average test confusion matrix/test accuracy
                     mean_confusion_test = sum(list_confusion_test) / n_splits
                     mean_confusion_test = pd.DataFrame(mean_confusion_test, columns=train_stimuli, index=train_stimuli).fillna(0)
                     # print(mean_confusion_test.round(3))
@@ -1486,27 +1475,27 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
                     # print(round(mean_accuracy, ndigits=3))
                     list_mean_accuracy.append(mean_accuracy)
 
-                # RRneuron
+                # Change slope
 
                 print(f'target slope {target_slope:.1f}, area {area}, sess_ind: {sess_ind}')
                                     
-                # 평균이 0인 경우 NaN으로 바꾸기 (mean이 0인 경우와 var이 0인 경우가 정확히 일치하는 것을 이미 확인함.)
+                # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
                 rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
                 rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
 
-                # RRneuron var 계산
+                # calculate target variance
                 var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
 
                 # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
-                # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed # 산술평균 유지
-                offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) # 기하평균 유지, dataframe.mean()은 default로 skipna=True
+                # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
+                offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) 
 
                 var_rs_noisy = \
                     pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
-                        / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # broadcasting하려면 Series이거나 ndarray여야 함 # collapsed
+                        / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # collapsed
                 var_rs_noisy = np.repeat(np.squeeze(var_rs_noisy)[:, :, np.newaxis], min_num_trials, axis=2)
 
-                # rate residual RR 계산 & mean과 다시 합하기
+                # Compute changed residual and add back to the mean
                 rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
                 # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
                 #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
@@ -1514,15 +1503,15 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
                     * np.sqrt(var_rs_noisy)
                 # print(rate_resid_RRneuron_dr)
                 rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
-                rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # NaN을 다시 0으로 바꾸기!        
+                rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!        
 
-                # # trial 순서 re-randomization
+                # # trial order re-randomization
                 # for trial_type_ind in range(num_trial_types):
                 #     rate_RRneuron_dr[:, trial_type_ind, :] = rate_RRneuron_dr[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
 
                 # decoding cross-validation (RRneuron)  
 
-                # 각 trial type 추출
+                # Re-convert to 2D response matrix
                 label_train_RRneuron = np.repeat(all_stimuli, min_num_trials)
                 rate_train_RRneuron = pd.DataFrame(rate_RRneuron_dr.reshape(rate_RRneuron_dr.shape[0], -1), columns=label_train_RRneuron)
                 
@@ -1535,7 +1524,7 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
 
                 if decoder_type == 'SVM':
                     for split_ind, (train_index, test_index) in enumerate(stkfold.split(rate_train_RRneuron.T, label_train_RRneuron)):
-                        X_train, X_test = rate_train_RRneuron.T.iloc[train_index].copy(), rate_train_RRneuron.T.iloc[test_index].copy() # train, test data/label 선언
+                        X_train, X_test = rate_train_RRneuron.T.iloc[train_index].copy(), rate_train_RRneuron.T.iloc[test_index].copy() # train, test data/label
                         y_train, y_test = label_train_RRneuron[train_index].copy(), label_train_RRneuron[test_index].copy()
 
                         mean_ = X_train.mean(axis=0)
@@ -1548,9 +1537,9 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
                         
                         clf_SVC.fit(X_train, y_train) # SVC fitting to train data
                         
-                        y_test_pred_SVC = clf_SVC.predict(X_test) # test data에 대한 predicted label
+                        y_test_pred_SVC = clf_SVC.predict(X_test) # predicted label for test data
 
-                        # normalized test confusion matrix/test accuracy를 list에 추가
+                        # record normalized test confusion matrix/test accuracy
                         test_confusion_matrix = confusion_matrix(y_test, y_test_pred_SVC)
                         test_confusion_matrix = test_confusion_matrix / np.sum(test_confusion_matrix, axis=1, keepdims=True)
                         list_confusion_test.append(test_confusion_matrix)
@@ -1561,7 +1550,7 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
                     
                         # print(f'split_ind {split_ind}')
 
-                # cross-validation average test confusion matrix/test accuracy 계산
+                # calculate cross-validation average test confusion matrix/test accuracy
                 mean_confusion_test = sum(list_confusion_test) / n_splits
                 mean_confusion_test = pd.DataFrame(mean_confusion_test, columns=train_stimuli, index=train_stimuli).fillna(0)
                 # print(mean_confusion_test.round(3))
@@ -1577,7 +1566,7 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
         list_mean_confusion_test_RRneuron_HVA[area] = list_mean_confusion_test_RRneuron.copy()
         list_mean_accuracy_RRneuron_HVA[area] = list_mean_accuracy_RRneuron.copy()
 
-    # 파일에 저장
+    # Save into a file
     filename = decoder_type + '_decoding_ABO_HVA_' + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_mean_confusion_test_HVA', 'list_mean_accuracy_HVA', 'list_mean_confusion_test_RRneuron_HVA', 'list_mean_accuracy_RRneuron_HVA'],
@@ -1587,66 +1576,7 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type):
     print("Ended Process", c_proc.name)
 
 # %%
-# matlab 분석에 필요한 변수들을 .mat 파일로 저장
-def save_ABO_variables(sess_ind):
-
-    c_proc = mp.current_process()
-    print("Running on Process", c_proc.name, "PID", c_proc.pid)
-
-    sess_id = brain_observatory_sessid[sess_ind]
-    print(f'sess_ind = {sess_ind}\n{sess_id}')
-
-    sess_name = 'session_' + str(sess_id)
-    file_path = 'D:\\Users\\USER\\MATLAB\\Allen_Brain_Neuropixels\\ecephys_cache_dir\\' + sess_name + '\\' + sess_name + '.nwb'
-    
-    with NWBHDF5IO(file_path, "r", load_namespaces=True) as io:
-        nwb = io.read()
-
-        # 각 unit의 brain area 저장
-        nwbread_unit_ids = nwb.units.id.data[:].copy()
-        # print(f'total unit number {nwbread_unit_ids.shape[0]}')
-        
-        units_df = nwb.units[:].copy() # 각 unit이 어떤 peak channel에 속하는지 포함
-        electrodes_df = nwb.electrodes[:].copy() # 각 channel이 어떤 brain area인지 포함
-
-        # Suppose "peak_channel_id" is how units reference an electrode
-        # Make sure it's integer or a matching type so we can join
-        units_df["peak_channel_id"] = units_df["peak_channel_id"].astype(int).copy()
-
-        # Rename the index in electrodes_df for easy merging
-        electrodes_df = electrodes_df.rename_axis("channel_id").reset_index()
-
-        # Merge on the channel_id vs. the peak_channel_id
-        merged_df = pd.merge(
-            left=units_df.reset_index(),  # reset_index() so that the "id" is a column
-            right=electrodes_df,
-            how="left",
-            left_on="peak_channel_id",
-            right_on="channel_id"
-        )
-
-        list_unit_areas = merged_df.loc[:, 'location'].copy()
-
-        # list_unit_areas = []
-        # for unit_ind, unit_id in enumerate(nwbread_unit_ids):
-        #     print(unit_ind)
-        #     # print(nwb.electrodes[:].loc[nwb.units[:].loc[unit_id, 'peak_channel_id'], 'location'])
-        #     list_unit_areas.append(nwb.electrodes[:].loc[nwb.units[:].loc[unit_id, 'peak_channel_id'], 'location'])
-        # # print(list_unit_areas)
-
-        # .mat 파일로 변수들 저장
-        savefile_name = 'nwb_' + str(sess_id) + '.mat'
-        savemat(savefile_name, dict(unit_ids=nwb.units.id.data[:],
-                                    unit_times_data=nwb.units.spike_times.data[:],
-                                    unit_times_idx=nwb.units.spike_times_index.data[:],
-                                    unit_loc=np.array(list_unit_areas, dtype=object))) # 마지막 변수는 matlab cell로 저장됨
-
-    # io.close()
-
-    print("Ended Process", c_proc.name)
-
-# %%
-# 변수 loading
+# loading variables
 
 # ABO Neuropixels
 with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
@@ -1688,19 +1618,10 @@ num_sess = 32
         
 #         pool.starmap(RSA_withinsess_ABO_HVA, list_inputs)
 
-# # decoding
-# if __name__ == '__main__':
+# decoding
+if __name__ == '__main__':
 
-#     with mp.Pool(processes=24) as pool:
-#         list_inputs = [[sess_ind, 'SVM'] for sess_ind in range(num_sess)]
+    with mp.Pool() as pool:
+        list_inputs = [[sess_ind, 'SVM'] for sess_ind in range(num_sess)]
         
-#         pool.starmap(decode_ABO, list_inputs)
-
-# # ABO 변수 저장
-# num_sess = 32
-# if __name__ == '__main__':
-
-#     with mp.Pool() as pool:
-#         list_inputs = [[sess_ind] for sess_ind in np.arange(28, 32).astype(int)]
-        
-#         pool.starmap(save_ABO_variables, list_inputs)
+        pool.starmap(decode_ABO, list_inputs)

@@ -81,20 +81,20 @@ def compute_mean_var_trial_collapse(label_cnt_dict, rate_sorted):
     return rate_sorted_mean, rate_sorted_var
 
 # %%
-# cosine similarity 계산 함수
+# Function to compute cosine similarity
 def cos_sim(x, y):
-    # x, y 각각 1d vector
+    # x and y are 1D vectors
 
     # dot_xy = np.dot(x, y)
-    # norm_x, norm_y = np.linalg.norm(x), np.linalg.norm(y)
+    # norm_x, norm_y = np.linalg.norm(x.astype(np.float32)), np.linalg.norm(y.astype(np.float32))
 
     # cos_sim = np.dot(normr(np.squeeze(np.squeeze(x).reshape(1, -1))), \
     #                  normr(np.squeeze(np.squeeze(y).reshape(1, -1))))
 
-    return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
+    return np.dot(x, y) / (np.linalg.norm(x.astype(np.float32)) * np.linalg.norm(y.astype(np.float32)))
 
 # %%
-# orthogonal & parallel distance 계산 함수
+# Function to compute orthogonal & parallel distance
 def compute_orth_par_dist(manifold_name1, manifold_name2, rate_12, rate_sorted_mean_coll):
     mean_vector = rate_sorted_mean_coll.loc[:, manifold_name2] - rate_sorted_mean_coll.loc[:, manifold_name1] # mean vector
     mat1 = rate_12.loc[:, manifold_name1].sub(rate_sorted_mean_coll.loc[:, manifold_name1], axis=0) # trial vector
@@ -118,10 +118,10 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, similarity_ty
     num_sess = 32
     num_trial_types = 119
 
-    # 모든 session에 대해 iteration
+    # Iterate over all sessions
 
-    list_mean_sim2_ABO_one_tt = np.zeros((num_sess, num_trial_types, num_trial_types-1)) # 분석할 trial type 수 고려한 순열
-    list_orthopar2_ABO_one_tt = np.zeros((num_sess, num_trial_types, num_trial_types-1, 2)) # ortho, par 2가지
+    list_mean_sim2_ABO_one_tt = np.zeros((num_sess, num_trial_types, num_trial_types-1)) # permutation of number of stimuli
+    list_orthopar2_ABO_one_tt = np.zeros((num_sess, num_trial_types, num_trial_types-1, 2)) # ortho, par
     list_tot_var2_ABO_one_tt = np.zeros((num_sess, num_trial_types, num_trial_types-1, 2))
     for sess_ind in range(num_sess):
         print(f'sess_ind: {sess_ind}')
@@ -130,43 +130,43 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, similarity_ty
         rate_sorted = rate.sort_index(axis=1)
         stm = rate_sorted.columns.copy()
 
-        # delta t 곱해서 spike count로 만들기
+        # Multiply by delta t to convert to spike counts
         rate_sorted = rate_sorted * 0.25
 
-        # stm type별 counting dictionary 제작
-        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) # 모든 trial type counting
+        # Create a counting dictionary for each stimulus
+        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
         stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
 
-        # trial type별 mean & variance 계산
+        # Compute mean & variance for each stimulus
         rate_sorted_mean, rate_sorted_var = compute_mean_var_trial(stm_cnt_dict, rate_sorted)
         rate_sorted_mean_coll, rate_sorted_var_coll = compute_mean_var_trial_collapse(stm_cnt_dict, rate_sorted)
 
         list_slopes_dr = pd.DataFrame(list_slopes_all_an_loglog[sess_ind],
                                         columns=rate_sorted_mean_coll.columns).copy()
 
-        # 평균이 0인 경우 NaN으로 바꾸기 (mean이 0인 경우와 var이 0인 경우가 정확히 일치하는 것을 이미 확인함.)
+        # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
         rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
         rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
 
-        # RRneuron var 계산
+        # calculate target variance
         var_estim_dr = pd.DataFrame(np.zeros((1, rate_sorted_var_coll.shape[1])), \
-                                columns=rate_sorted_var_coll.columns) # RRneuron0 var (collapsed)
+                                columns=rate_sorted_var_coll.columns) 
         for trial_type in rate_sorted_var_coll.columns:
             var_estim_dr.loc[:, trial_type] = \
                 np.nanmean(rate_sorted_var.loc[:, trial_type].values.flatten()) # nanmean
-        # var_estim_dr = np.repeat(var_estim_dr, all_stm_counts, axis=1) # RRneuron0가 아니면 필요 없음
+        # var_estim_dr = np.repeat(var_estim_dr, all_stm_counts, axis=1) 
         # print(var_estim_dr)
 
         # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
-        # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed # 산술평균 유지
-        offset = pow(10, (list_slopes_dr.iloc[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr.iloc[1, :]) # 기하평균 유지, dataframe.mean()은 default로 skipna=True
+        # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
+        offset = pow(10, (list_slopes_dr.iloc[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr.iloc[1, :]) 
 
         var_rs_noisy = \
             pow(10, np.log10(rate_sorted_var_coll).sub(list_slopes_dr.iloc[1, :], axis=1)\
-                .div(list_slopes_dr.iloc[0, :], axis=1).mul(target_slope).add(np.log10(np.array(offset)), axis=1)) # broadcasting하려면 Series이거나 ndarray여야 함 # collapsed
+                .div(list_slopes_dr.iloc[0, :], axis=1).mul(target_slope).add(np.log10(np.array(offset)), axis=1)) # collapsed
         var_rs_noisy = np.repeat(var_rs_noisy, all_stm_counts, axis=1)
 
-        # rate residual RR 계산 & mean과 다시 합하기            
+        # Compute changed residual and add back to the mean            
         rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
         # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
         #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
@@ -174,12 +174,12 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, similarity_ty
             .mul(np.sqrt(var_rs_noisy))
         # print(rate_resid_RRneuron_dr)
         rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
-        rate_RRneuron_dr[rate_RRneuron_dr.isna()] = 0 # NaN을 다시 0으로 바꾸기!  
+        rate_RRneuron_dr[rate_RRneuron_dr.isna()] = 0 # convert NaN to 0!  
 
         rate_sorted_mean_coll[rate_sorted_mean_coll.isna()] = 0  
         rate_sorted_var_coll[rate_sorted_var_coll.isna()] = 0
 
-        # FF 출력해서 의도대로 됐는지 확인
+        # Compute mean and variance of slope-changed data
         rate_mean_RRneuron_coll, rate_var_RRneuron_coll = \
             compute_mean_var_trial_collapse(stm_cnt_dict, rate_RRneuron_dr)
         # FF_RRneuron = rate_var_RRneuron_dr.div(rate_mean_RRneuron_dr)
@@ -187,20 +187,20 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, similarity_ty
         # print(rate_var_RRneuron_dr)
 
         if similarity_type == 'geodesic':
-            # trial type별 mean point들 concatenate
+            # concatenate centroids of all stimuli
             rate_plus_mean = pd.concat([rate_RRneuron_dr, rate_mean_RRneuron_coll], axis=1)
 
-            # geodesic distance matrix 계산
-            n_components = 1 # 목표 차원 수
-            # n_components = rate_RRneuron_dr.shape[0] # 목표 차원 수
-            n_neighbors = 5 # 이웃 점 개수
+            # Compute geodesic distance matrix
+            n_components = 1 # target number of dimensions
+            # n_components = rate_RRneuron_dr.shape[0] # target number of dimensions
+            n_neighbors = 5 # number of neighbors
 
             isomap = Isomap(n_neighbors=n_neighbors, n_components=n_components)
             
             isomap.fit(rate_plus_mean.T)
-            mean_dist_mat_RRneuron = isomap.dist_matrix_[rate_RRneuron_dr.shape[1]:, rate_RRneuron_dr.shape[1]:].copy() # mean point들 간의 geodesic distance matrix
+            mean_dist_mat_RRneuron = isomap.dist_matrix_[rate_RRneuron_dr.shape[1]:, rate_RRneuron_dr.shape[1]:].copy() # inter-centroid geodesic distance matrix
                         
-        # 모든 trial type에 대해 iteration (~25 min)
+        # Iterate over all stimuli (~25 min)
         list_mean_sim_one_tt = np.zeros((num_trial_types, num_trial_types-1))
         list_orthopar_one_tt = np.zeros((num_trial_types, num_trial_types-1, 2))
         list_tot_var_one_tt = np.zeros((num_trial_types, num_trial_types-1, 2))
@@ -209,31 +209,31 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, similarity_ty
 
             bool_not_tt = rate_sorted_mean_coll.columns != trial_type
 
-            # mean point 간 similarity 계산
+            # compute similarity between centroids
             if similarity_type == 'cos_sim':
                 list_mean_sim_one_tt[trial_type_ind] = [cos_sim(rate_sorted_mean_coll.loc[:, trial_type], rate_sorted_mean_coll.loc[:, partner_tt]) \
                                                     for partner_tt in rate_sorted_mean_coll.columns[bool_not_tt]]
             else:
                 list_mean_sim_one_tt[trial_type_ind] = mean_dist_mat_RRneuron[trial_type_ind, bool_not_tt].copy()
 
-            # partner trial type에 대한 orthogonal variance 계산
+            # compute orthogonal variance against partner stimulus manifold
             for partner_ind, partner_tt in enumerate(rate_sorted_mean_coll.columns[bool_not_tt]):
                 rate_pair = rate_RRneuron_dr.loc[:, [trial_type, partner_tt]].copy()
                 label_cnt_dict_pair = dict(zip(np.unique(rate_pair.columns, return_counts=True)[0], np.unique(rate_pair.columns, return_counts=True)[1]))
                 rate_sorted_mean_coll_pair, rate_sorted_var_coll_pair = compute_mean_var_trial_collapse(label_cnt_dict_pair, rate_pair)
 
                 mat_orth, mat_par = compute_orth_par_dist(trial_type, partner_tt, rate_pair, rate_sorted_mean_coll_pair)
-                list_orthopar_one_tt[trial_type_ind, partner_ind] = [np.var(np.linalg.norm(mat_orth, axis=0), ddof=1), \
-                                                            np.var(np.linalg.norm(mat_par, axis=0), ddof=1)]
+                list_orthopar_one_tt[trial_type_ind, partner_ind] = [np.var(np.linalg.norm(mat_orth.astype(np.float32), axis=0), ddof=1), \
+                                                            np.var(np.linalg.norm(mat_par.astype(np.float32), axis=0), ddof=1)]
             
-            # orthogonal variance normalization용 total variance 계산
-            list_tot_var_one_tt[trial_type_ind] = rate_sorted_var_coll.loc[:, trial_type].sum() # mean이 아니라 sum 주의
+            # compute total variance for normalization
+            list_tot_var_one_tt[trial_type_ind] = rate_sorted_var_coll.loc[:, trial_type].sum() 
 
         list_mean_sim2_ABO_one_tt[sess_ind] = list_mean_sim_one_tt.copy()
         list_orthopar2_ABO_one_tt[sess_ind] = list_orthopar_one_tt.copy()
         list_tot_var2_ABO_one_tt[sess_ind] = list_tot_var_one_tt.copy()
 
-    # 파일에 저장
+    # Save into a file
     filename = 'meansim_orthopar_ABO_allneu_' + similarity_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_mean_sim2_ABO_one_tt', 'list_orthopar2_ABO_one_tt', 'list_tot_var2_ABO_one_tt'],
@@ -242,7 +242,7 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, similarity_ty
     print("Ended Process", c_proc.name)
 
 # %%
-# 변수 loading
+# loading variables
 
 # ABO
 with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:

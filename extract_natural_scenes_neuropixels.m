@@ -1,13 +1,12 @@
+% Set appropriate path to your directory
 addpath(genpath('D:\Users\USER\MATLAB\Allen_Brain_Neuropixels\'))
 addpath(genpath('Z:\BerkeleyGoogleDriveBackup\DATA\OpenSource\AllenBrainNeuropixels\'))
 addpath(genpath('D:\Users\USER\MATLAB\matnwb-main\'))
 
 datapath = 'Z:\BerkeleyGoogleDriveBackup\DATA\OpenSource\AllenBrainNeuropixels\Allen_Neuropixels_postprocessed\AllenNeuropixels\';
-analpath = 'Z:\BerkeleyGoogleDriveBackup\DATA\OpenSource\AllenBrainNeuropixels\Allen_Neuropixels_postprocessed\AllenNeuropixelsAnalyzed\';
 
+% Set your save path
 pathsv = 'D:\Users\USER\MATLAB\Allen_Brain_Neuropixels\ns\';
-
-datapath2 = 'D:\Users\USER\Shin Lab\Allen_Neuropixels_nwb_variables\';
 
 if ~exist(pathsv, 'dir')
     mkdir(pathsv)
@@ -23,16 +22,13 @@ for ises = 1:size(sessions, 1)
     disp(sesid)
     fprintf('ises %d\n', ises);
 
-    % %% determines RS and FS
-    load(strcat('Z:\BerkeleyGoogleDriveBackup\DATA\OpenSource\AllenBrainNeuropixels\Allen_Neuropixels_postprocessed\AllenNeuropixelsCCG\CCG_', sesid, '.mat'), 'nwbunitsV1')
-
     % spike train
     nwb = nwbRead(strcat(datapath, 'session_', sesid, '\session_', sesid, '.nwb'));
     unit_ids = nwb.units.id.data.load(); % array of unit ids represented within this
     unit_times_data = nwb.units.spike_times.data.load();
     unit_times_idx = nwb.units.spike_times_index.data.load();
 
-    % unit별 area 찾기
+    % brain area for units
     sesunits = readtable(strcat(datapath, 'units_', sesid, '.csv'));
     sesunits2nwbind = zeros(size(sesunits,1),1);
     for ii = 1:size(sesunits,1)
@@ -43,15 +39,24 @@ for ises = 1:size(sessions, 1)
     nwbunitstructure(sesunits2nwbind) = sesunits.ecephys_structure_acronym;
     nwbunitstructure(cellfun(@isempty,nwbunitstructure))={'N/A'};
 
+    % V1
+    nwbunitsV1 = find(strcmp(nwbunitstructure, 'VISp'));
+    nwbunitsDVpos = zeros(size(unit_ids));
+    nwbunitsDVpos(sesunits2nwbind) = sesunits.dorsal_ventral_ccf_coordinate;
+    nwbunitsV1DVpos = nwbunitsDVpos(nwbunitsV1);
+    [sv,si]=sort(nwbunitsV1DVpos);
+    nwbunitsV1 = nwbunitsV1(si);
+
+    % higher visual areas (HVA)
     list_nwbunitsHVA = cell(1, 5);
     list_HVA_names = ["VISl", "VISrl", "VISal", "VISpm", "VISam"];
     for hva_i = 1:numel(list_HVA_names)
         list_nwbunitsHVA{hva_i} = find(strcmp(nwbunitstructure, list_HVA_names(hva_i)));
     end
 
-    % spike train 제작
+    % create spike train
 
-    % spike time (모든 area)
+    % spike time (all areas)
     spiketimes = cell(size(unit_ids));
     last_idx = 0;
     for ii = 1:length(unit_ids)
@@ -84,12 +89,10 @@ for ises = 1:size(sessions, 1)
         list_spiketrain_HVA{hva_i} = spiketrain_HVA;
     end
 
-    % %% stimtable
+    % stimtable
     stimtable = readtable(strcat(datapath, 'stimulus_table_', sesid, '.csv'));
 
     % natural_scenes trials
-    % load(strcat(pathsv, 'Rns_V1RS_', sesid, '.mat'))
-    % clear nstrialframe
     nstrials = strcmp(stimtable.stimulus_name, 'natural_scenes');
     nstrialstart = stimtable.start_time(nstrials);
     nstrialframe = str2double(stimtable.frame(nstrials));
@@ -122,7 +125,7 @@ for ises = 1:size(sessions, 1)
     Rns = (1/Tres)*squeeze(mean(psthns(psthtlins>0&psthtlins<=250,:,:),1));
     Nunits = size(Rns,2);
     Ntrials = size(Rns,1);    
-    save(strcat(pathsv, 'Rns_V1_test_', sesid, '.mat'), ...
+    save(strcat(pathsv, 'Rns_V1_', sesid, '.mat'), ...
         'nstrialstart', 'psthns', 'Rns', 'Nunits', 'Ntrials', 'nstrialframe')
 
     % HVA
@@ -132,7 +135,7 @@ for ises = 1:size(sessions, 1)
         Nunits = size(Rns,2);
         Ntrials = size(Rns,1);
 
-        % struct에 HVA 변수들 저장
+        % record HVA variables to struct
         struct_HVA.(list_HVA_names(hva_i)).psthns = list_psthns_HVA{hva_i};
         struct_HVA.(list_HVA_names(hva_i)).Rns = Rns;
         struct_HVA.(list_HVA_names(hva_i)).Nunits = Nunits;
@@ -141,7 +144,7 @@ for ises = 1:size(sessions, 1)
         struct_HVA.(list_HVA_names(hva_i)).nstrialframe = nstrialframe;
 
     end
-    save(strcat(pathsv, 'Rns_HVA_test_', sesid, '.mat'), ...
+    save(strcat(pathsv, 'Rns_HVA_', sesid, '.mat'), ...
         'struct_HVA', "-v7.3")
 
     toc
