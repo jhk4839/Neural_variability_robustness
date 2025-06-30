@@ -30,5 +30,5 @@ In each Jupyter Notebook, the first markdown cell and the cell immediately befor
 
 2. We analyzed the spike counts in the `.mat` files using Jupyter notebooks and Python scripts, and saved the resulting variables into pickle files.
 
-- The notebooks and Python scripts have been verified to run in a Python 3.11.10 virtual environment after installing the packages listed in `requirements.txt` (in the `code` folder).  
+- The notebooks and Python scripts have been verified to run in a Python 3.11.10 virtual environment after installing the packages listed in `requirements.txt`.  
 - The MATLAB scripts have been verified to run in MATLAB R2024b.
