@@ -563,13 +563,13 @@ with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
 # multiprocessing
 list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
 
-# # filling box count
-# if __name__ == '__main__':
+# filling box count
+if __name__ == '__main__':
 
-#     with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised
-#         list_inputs = [[slope_ind, target_slope] for slope_ind, target_slope in enumerate(list_target_slopes) if slope_ind == 0]
+    with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised
+        list_inputs = [[slope_ind, target_slope] for slope_ind, target_slope in enumerate(list_target_slopes)]
         
-#         pool.starmap(compute_filling_boxcount, list_inputs)
+        pool.starmap(compute_filling_boxcount, list_inputs)
 
 # overlap between stimulus pairs
 num_sess = 32
