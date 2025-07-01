@@ -104,14 +104,14 @@ def cos_sim(x, y):
     bool_notnan = np.logical_and(~np.isnan(x), ~np.isnan(y))
     x, y = x[bool_notnan].copy(), y[bool_notnan].copy()
 
-    return np.dot(x, y) / (np.linalg.norm(x.astype(np.float32)) * np.linalg.norm(y.astype(np.float32)))
+    return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 # %%
 # Function for column normalization
 def normc(matrix):
     '''For 2D matrix'''
 
-    matrix_normalized = matrix / np.linalg.norm(matrix.astype(np.float32), axis=0)
+    matrix_normalized = matrix / np.linalg.norm(matrix, axis=0)
 
     return matrix_normalized
 
@@ -1004,7 +1004,7 @@ def decode_ABO(sess_ind, decoder_type):
                 X_test = X_test.sub(mean_, axis=1)
 
                 if decoder_type == 'SVM':
-                    clf = svm.SVC(kernel='linear', max_iter=-1)
+                    clf = svm.SVC(kernel='linear')
                 elif decoder_type == 'logit':
                     clf = logit(max_iter=100) # default: L2 regularization, lbfgs solver, C=1
                 elif decoder_type == 'RF':
@@ -1098,7 +1098,7 @@ def decode_ABO(sess_ind, decoder_type):
                     X_test = X_test.sub(mean_, axis=1)
 
                     if decoder_type == 'SVM':
-                        clf = svm.SVC(kernel='linear', max_iter=-1)
+                        clf = svm.SVC(kernel='linear')
                     elif decoder_type == 'logit':
                         clf = logit(max_iter=100) # default: L2 regularization, lbfgs solver, C=1
                     elif decoder_type == 'RF':
@@ -1401,7 +1401,7 @@ num_sess = 32
 # RSA across session pairs
 if __name__ == '__main__':
 
-    with mp.Pool() as pool:
+    with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised
         list_inputs = [[slope_ind, target_slope, 'cos_sim'] for slope_ind, target_slope in enumerate(list_target_slopes)]
         
         pool.starmap(RSA_across_sesspairs_ABO, list_inputs)
@@ -1409,7 +1409,7 @@ if __name__ == '__main__':
 # RSA across session pairs
 if __name__ == '__main__':
 
-    with mp.Pool() as pool:
+    with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised
         list_inputs = [[slope_ind, target_slope, 'cos_sim'] for slope_ind, target_slope in enumerate(list_target_slopes)]
         
         pool.starmap(RSA_across_sesspairs_ABO_HVA, list_inputs)
@@ -1417,7 +1417,7 @@ if __name__ == '__main__':
 # RSA within sessions
 if __name__ == '__main__':
 
-    with mp.Pool() as pool:
+    with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised
         list_inputs = [[slope_ind, target_slope, 'cos_sim'] for slope_ind, target_slope in enumerate(list_target_slopes)]
         
         pool.starmap(RSA_withinsess_ABO, list_inputs)
@@ -1425,7 +1425,7 @@ if __name__ == '__main__':
 # RSA within sessions
 if __name__ == '__main__':
 
-    with mp.Pool() as pool:
+    with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised
         list_inputs = [[slope_ind, target_slope, 'cos_sim'] for slope_ind, target_slope in enumerate(list_target_slopes)]
         
         pool.starmap(RSA_withinsess_ABO_HVA, list_inputs)
@@ -1433,7 +1433,7 @@ if __name__ == '__main__':
 # decoding
 if __name__ == '__main__':
 
-    with mp.Pool() as pool:
+    with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised
         list_inputs = [[sess_ind, 'SVM'] for sess_ind in range(num_sess)]
         
         pool.starmap(decode_ABO, list_inputs)
@@ -1441,7 +1441,7 @@ if __name__ == '__main__':
 # decoding
 if __name__ == '__main__':
 
-    with mp.Pool() as pool:
+    with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised
         list_inputs = [[slope_ind, target_slope, 'SVM'] for slope_ind, target_slope in enumerate(list_target_slopes)]
         
         pool.starmap(decode_ABO_HVA, list_inputs)

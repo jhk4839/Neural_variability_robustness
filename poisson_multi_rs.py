@@ -224,7 +224,7 @@ with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
 num_sess = 32
 if __name__ == '__main__':
     
-    with mp.Pool() as pool:    
+    with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised   
         list_inputs = [[sess_ind] for sess_ind in range(num_sess)]
         
         pool.starmap(compare_two_poissons, list_inputs)

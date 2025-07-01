@@ -88,11 +88,11 @@ def cos_sim(x, y):
     # x and y are 1D vectors
 
     # dot_xy = np.dot(x, y)
-    # norm_x, norm_y = np.linalg.norm(x.astype(np.float32)), np.linalg.norm(y.astype(np.float32))
+    # norm_x, norm_y = np.linalg.norm(x), np.linalg.norm(y)
 
     # cos_sim = dot_xy / (norm_x * norm_y)
 
-    return np.dot(x, y) / (np.linalg.norm(x.astype(np.float32)) * np.linalg.norm(y.astype(np.float32)))
+    return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 # %%
 # ABO PC1 analysis (PC1 of each stimulus vs. local/global PC1)
@@ -315,7 +315,7 @@ list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
 # alignment PC1
 if __name__ == '__main__':
 
-    with mp.Pool() as pool:
+    with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised
         list_inputs = [[slope_ind, target_slope, 'geodesic'] for slope_ind, target_slope in enumerate(list_target_slopes)]
         
         pool.starmap(compute_cos_sim_pc1_adj_ABO, list_inputs)

@@ -86,12 +86,12 @@ def cos_sim(x, y):
     # x and y are 1D vectors
 
     # dot_xy = np.dot(x, y)
-    # norm_x, norm_y = np.linalg.norm(x.astype(np.float32)), np.linalg.norm(y.astype(np.float32))
+    # norm_x, norm_y = np.linalg.norm(x), np.linalg.norm(y)
 
     # cos_sim = np.dot(normr(np.squeeze(np.squeeze(x).reshape(1, -1))), \
     #                  normr(np.squeeze(np.squeeze(y).reshape(1, -1))))
 
-    return np.dot(x, y) / (np.linalg.norm(x.astype(np.float32)) * np.linalg.norm(y.astype(np.float32)))
+    return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 # %%
 # Function to compute orthogonal & parallel distance
@@ -216,8 +216,8 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, adjacency_typ
                 rate_sorted_mean_coll_pair, rate_sorted_var_coll_pair = compute_mean_var_trial_collapse(label_cnt_dict_pair, rate_pair)
 
                 mat_orth, mat_par = compute_orth_par_dist(trial_type, partner_tt, rate_pair, rate_sorted_mean_coll_pair)
-                list_orthopar_one_tt[trial_type_ind, partner_ind] = [np.var(np.linalg.norm(mat_orth.astype(np.float32), axis=0), ddof=1), \
-                                                            np.var(np.linalg.norm(mat_par.astype(np.float32), axis=0), ddof=1)]
+                list_orthopar_one_tt[trial_type_ind, partner_ind] = [np.var(np.linalg.norm(mat_orth, axis=0), ddof=1), \
+                                                            np.var(np.linalg.norm(mat_par, axis=0), ddof=1)]
             
             # compute total variance for normalization
             list_tot_var_one_tt[trial_type_ind] = rate_sorted_var_coll.loc[:, trial_type].mean() 
@@ -252,7 +252,7 @@ list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
 # ABO
 if __name__ == '__main__':
 
-    with mp.Pool() as pool:
+    with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised
         list_inputs = [[slope_ind, target_slope, 'geodesic'] for slope_ind, target_slope in enumerate(list_target_slopes)]
         
         pool.starmap(compute_meansim_orthopar_ABO_RRneuron, list_inputs)

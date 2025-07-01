@@ -86,7 +86,7 @@ def cos_sim(x, y):
     bool_notnan = np.logical_and(~np.isnan(x), ~np.isnan(y))
     x, y = x[bool_notnan].copy(), y[bool_notnan].copy()
 
-    return np.dot(x, y) / (np.linalg.norm(x.astype(np.float32)) * np.linalg.norm(y.astype(np.float32)))
+    return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 # %%
 # Function to compute orthogonal & parallel distance
@@ -117,7 +117,7 @@ def weighted_angle(A_left, B_left, A_sing, B_sing):
     if B_left.shape[0] > 1: # more than 1 basis
         Q = (A_left@A_sing).T @ (B_left@B_sing)
         try:
-            _, S_Q, _ = np.linalg.svd(Q.astype(np.float32))
+            _, S_Q, _ = np.linalg.svd(Q)
         except:
             S_Q = np.full(np.min(Q.shape), np.nan)
         # print(f'singular values: {s}')
@@ -183,17 +183,17 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
         mat_orth_adj, _ = compute_orth_par_dist(trial_type, adj_tt, rate_pair, rate_sorted_mean_coll_pair)
         mat_orth_adj = pd.DataFrame(mat_orth_adj, index=rate_pair.index)
         mean_vector = rate_sorted_mean_coll.loc[:, adj_tt] - rate_sorted_mean_coll.loc[:, trial_type]
-        radius_tt = np.percentile(np.linalg.norm(mat_orth_adj.astype(np.float32), axis=0), 90)
+        radius_tt = np.percentile(np.linalg.norm(mat_orth_adj, axis=0), 90)
 
         # neighbor stimulus
         mat_orth_adj_rev, _ = compute_orth_par_dist(adj_tt, trial_type, rate_pair, rate_sorted_mean_coll_pair)
         mat_orth_adj_rev = pd.DataFrame(mat_orth_adj_rev, index=rate_pair.index)
         mean_vector_rev = rate_sorted_mean_coll.loc[:, trial_type] - rate_sorted_mean_coll.loc[:, adj_tt]
-        radius_tt_rev = np.percentile(np.linalg.norm(mat_orth_adj_rev.astype(np.float32), axis=0), 90)
+        radius_tt_rev = np.percentile(np.linalg.norm(mat_orth_adj_rev, axis=0), 90)
 
         rad_ratio_tt, rad_ratio_tt_rev = radius_tt / (radius_tt + radius_tt_rev), radius_tt_rev / (radius_tt + radius_tt_rev)
-        bool_pos = np.array(mat_orth_adj.apply(lambda x : np.dot(x, rad_ratio_tt*mean_vector), axis=0) < np.linalg.norm((rad_ratio_tt*mean_vector).astype(np.float32))**2)
-        bool_pos_rev = np.array(mat_orth_adj_rev.apply(lambda x : np.dot(x, rad_ratio_tt_rev*mean_vector_rev), axis=0) < np.linalg.norm((rad_ratio_tt_rev*mean_vector_rev).astype(np.float32))**2)
+        bool_pos = np.array(mat_orth_adj.apply(lambda x : np.dot(x, rad_ratio_tt*mean_vector), axis=0) < np.linalg.norm((rad_ratio_tt*mean_vector))**2)
+        bool_pos_rev = np.array(mat_orth_adj_rev.apply(lambda x : np.dot(x, rad_ratio_tt_rev*mean_vector_rev), axis=0) < np.linalg.norm((rad_ratio_tt_rev*mean_vector_rev))**2)
 
         # 3. Select trials farthest from centroid & having orthogonal distances near midpoint
         
@@ -201,7 +201,7 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
         rate_tt_pos = rate_pair.loc[:, trial_type].loc[:, bool_pos].copy()
         geo_tt = dist_mat_asis_pair[:rate_pair.loc[:, trial_type].shape[1]][bool_pos, 0].copy()
         cand_inds1 = np.array(geo_tt >= np.percentile(geo_tt, 75)) # trials farthest from the centroid
-        dif_orth_tt = np.linalg.norm(mat_orth_adj.loc[:, bool_pos].sub(rad_ratio_tt*mean_vector, axis=0).astype(np.float32), axis=0)
+        dif_orth_tt = np.linalg.norm(mat_orth_adj.loc[:, bool_pos].sub(rad_ratio_tt*mean_vector, axis=0), axis=0)
         cand_inds2 = np.array(dif_orth_tt <= np.percentile(dif_orth_tt, 25)) # trials with orthogonal distances near midpoint
 
         cand_inds = np.logical_and(cand_inds1, cand_inds2)
@@ -212,7 +212,7 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
         rate_tt_pos_rev = rate_pair.loc[:, adj_tt].loc[:, bool_pos_rev].copy()
         geo_tt_rev = dist_mat_asis_pair[rate_pair.loc[:, trial_type].shape[1]:][bool_pos_rev, 1].copy()
         cand_inds1_rev = np.array(geo_tt_rev >= np.percentile(geo_tt_rev, 75)) # trials farthest from the centroid
-        dif_orth_tt_rev = np.linalg.norm(mat_orth_adj_rev.loc[:, bool_pos_rev].sub(rad_ratio_tt_rev*mean_vector_rev, axis=0).astype(np.float32), axis=0)
+        dif_orth_tt_rev = np.linalg.norm(mat_orth_adj_rev.loc[:, bool_pos_rev].sub(rad_ratio_tt_rev*mean_vector_rev, axis=0), axis=0)
         cand_inds2_rev = np.array(dif_orth_tt_rev <= np.percentile(dif_orth_tt_rev, 25)) # trials with orthogonal distances near midpoint
 
         cand_inds_rev = np.logical_and(cand_inds1_rev, cand_inds2_rev)
@@ -246,7 +246,7 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
         list_PC_tt = np.empty(cand_points_tt.shape[1], dtype=object) # weighted angle
         for cand_point_ind in range(cand_points_tt.shape[1]):
             cand_nbrs = rate_pair_pos.iloc[:, nbr_inds_tt.iloc[cand_point_ind]].copy()
-            U, S, VT = np.linalg.svd(cand_nbrs.sub(cand_nbrs.mean(axis=1), axis=0).astype(np.float32), full_matrices=False) # PCA + weighted angle
+            U, S, VT = np.linalg.svd(cand_nbrs.sub(cand_nbrs.mean(axis=1), axis=0), full_matrices=False) # PCA + weighted angle
             
             list_PC_tt[cand_point_ind] = dc([U, np.diag(S)]) # weighted angle
 
@@ -255,7 +255,7 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
         list_PC_tt_rev = np.empty(cand_points_tt_rev.shape[1], dtype=object) # weighted angle
         for cand_point_ind in range(cand_points_tt_rev.shape[1]):
             cand_nbrs = rate_pair_pos.iloc[:, nbr_inds_tt_rev.iloc[cand_point_ind]].copy()
-            U, S, VT = np.linalg.svd(cand_nbrs.sub(cand_nbrs.mean(axis=1), axis=0).astype(np.float32), full_matrices=False) # PCA + weighted angle
+            U, S, VT = np.linalg.svd(cand_nbrs.sub(cand_nbrs.mean(axis=1), axis=0), full_matrices=False) # PCA + weighted angle
             
             list_PC_tt_rev[cand_point_ind] = dc([U, np.diag(S)]) # weighted angle
 
@@ -407,7 +407,7 @@ num_sess = len(list_rate_all)
 # ABO tangent angle
 if __name__ == '__main__':
 
-    with mp.Pool() as pool:
+    with mp.Pool() as pool: # set the parameter 'processes' of Pool() if memory error is raised
         list_inputs = [[sess_ind] for sess_ind in range(num_sess)]
         
         pool.starmap(compute_tangent_angle_sess, list_inputs)
