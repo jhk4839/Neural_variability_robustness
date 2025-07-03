@@ -30,4 +30,7 @@ $RECYCLE.BIN/
 # folder containing large pickle files
 data/
 
+# large pickle files
+*.pickle
+
 # End of https://www.toptal.com/developers/gitignore/api/windows
