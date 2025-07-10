@@ -14,6 +14,7 @@ This repository contains the source code for the manuscript "Neural variability 
 
 First, install the python packages listed in `requirements.txt` in your Python 3.11.10 virtual environment.
 ```
+bash
 python -m pip install pip==24.2
 python -m pip install -r requirements.txt
 ```
