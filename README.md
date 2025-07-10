@@ -6,11 +6,17 @@ This repository contains the source code for the manuscript "Neural variability 
 - Python scripts (`.py`)  
 - MATLAB scripts (`.m`)  
 
-**To generate the figures, you only need the Jupyter Notebook files.**
+### 2. How to run the code
+- The Jupyter Notebooks and Python scripts have been verified to run using Visual Studio Code (Windows 11) in a Python 3.11.10 virtual environment after installing the packages listed in `requirements.txt` using pip 24.2. (Save `requirements.txt` in the same directory as the Jupyter Notebooks.)
+- The MATLAB scripts have been verified to run in MATLAB R2024b.
 
-### 2. How to generate figures
+**To generate the figures, you only need the Jupyter Notebooks, and pickle files which can be downloaded from https://figshare.com/s/64957e60fe943cb732a7. Those pickle files contain all the variables needed to run the Jupyter Notebooks, so save them in the same directory as the Jupyter Notebooks and run each Jupyter Notebook from the first cell.**
 
-In each Jupyter Notebook, the first markdown cell and the cell immediately before each figure-generating cell include the figure citation. In summary:
+First, install the python packages listed in `requirements.txt` in your Python 3.11.10 virtual environment.
+`python -m pip install pip==24.2`
+`python -m pip install -r requirements.txt`
+
+Second, run each Jupyter Notebook file using Visual Studio Code. You should run the cells in order, from the first cell. You can run specific Jupyter Notebooks for corresponding figures; In each Jupyter Notebook, the first markdown cell and the cell immediately before each figure-generating cell include the figure citation. In summary:
 
 - **box_counting_analysis.ipynb** → Figure S5C  
 - **decode_noise_corr.ipynb** → Figure 2B, S4, S6A  
@@ -22,13 +28,10 @@ In each Jupyter Notebook, the first markdown cell and the cell immediately befor
 - **RSA_overlap_SCC.ipynb** → Figure 2A, 2C, 4, S4C, S6B, S6C  
 - **visualize_manifold.ipynb** → Figure 1C, S5B, S5D  
 
-### 3. Details on the workflow
+### 3. How we collected and analyzed data
 
 1. We downloaded the Allen Brain Observatory Visual Coding Neuropixels data (NWB files), and ran the two MATLAB scripts to extract single-unit spike counts and saved them as `.mat` files.  
    For instructions on downloading NWB files, see the AllenSDK example:  
    https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_data_access.html#Using-the-AllenSDK-to-retrieve-data
 
-2. We analyzed the spike counts in the `.mat` files using Jupyter notebooks and Python scripts, and saved the resulting variables into pickle files.
-
-- The notebooks and Python scripts have been verified to run in a Python 3.11.10 virtual environment after installing the packages listed in `requirements.txt` using pip 24.2. 
-- The MATLAB scripts have been verified to run in MATLAB R2024b.
+2. We analyzed the spike counts in the `.mat` files using Jupyter Notebooks and Python scripts, and saved the resulting variables into pickle files.
