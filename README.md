@@ -13,8 +13,8 @@ This repository contains the source code for the manuscript "Neural variability 
 **To generate the figures, you only need the Jupyter Notebooks, and pickle files which can be downloaded from https://figshare.com/s/64957e60fe943cb732a7. Those pickle files contain all the variables needed to run the Jupyter Notebooks, so save them in the same directory as the Jupyter Notebooks and run each Jupyter Notebook from the first cell.**
 
 First, install the python packages listed in `requirements.txt` in your Python 3.11.10 virtual environment.
-`python -m pip install pip==24.2`
-`python -m pip install -r requirements.txt`
+```python -m pip install pip==24.2
+python -m pip install -r requirements.txt```
 
 Second, run each Jupyter Notebook file using Visual Studio Code. You should run the cells in order, from the first cell. You can run specific Jupyter Notebooks for corresponding figures; In each Jupyter Notebook, the first markdown cell and the cell immediately before each figure-generating cell include the figure citation. In summary:
 
