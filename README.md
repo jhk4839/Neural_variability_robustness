@@ -18,7 +18,7 @@ python -m pip install pip==24.2
 python -m pip install -r requirements.txt
 ```
 
-Second, run each Jupyter Notebook file using Visual Studio Code. You should run the cells in order, from the first cell. You can run specific Jupyter Notebooks for corresponding figures; In each Jupyter Notebook, the first markdown cell and the cell immediately before each figure-generating cell include the figure citation. In summary:
+Second, run each Jupyter Notebook file using Visual Studio Code. You should run the cells in order, from the first cell. You can run specific Jupyter Notebooks for corresponding figures; in each Jupyter Notebook, the first markdown cell and the cell immediately before each figure-generating cell include the figure citation. In summary:
 
 - **box_counting_analysis.ipynb** → Figure S5C  
 - **decode_noise_corr.ipynb** → Figure 2B, S4, S6A  
