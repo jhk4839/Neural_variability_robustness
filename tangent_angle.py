@@ -114,7 +114,7 @@ def weighted_angle(A_left, B_left, A_sing, B_sing):
         w_ang (scalar): Weighted angle (in radians) between the two subspaces.
     """
 
-    if B_left.shape[0] > 1: # more than 1 basis
+    if np.squeeze(B_left).ndim > 1: # more than 1 basis
         Q = (A_left@A_sing).T @ (B_left@B_sing)
         try:
             _, S_Q, _ = np.linalg.svd(Q)
@@ -130,15 +130,15 @@ def weighted_angle(A_left, B_left, A_sing, B_sing):
 
         w_ang = np.arccos(np.sum(S_Q) / np.trace(A_sing.T @ B_sing))
 
-    else: # # 1 basis
-        S_Q = (A_left@A_sing).T @ (B_left@B_sing) # scalar
+    else: # 1 basis
+        S_Q = (A_left*A_sing[0]).T @ (B_left*B_sing[0]) # scalar
 
         # Clamp singular values to the interval [-1, 1] to avoid numerical issues
         S_Q = np.clip(S_Q, -1.0, 1.0) 
         A_sing = np.clip(A_sing, -1.0, 1.0)
         B_sing = np.clip(B_sing, -1.0, 1.0)
 
-        w_ang = np.arccos(S_Q / (A_sing.T @ B_sing))
+        w_ang = np.arccos(S_Q / (A_sing[0] * B_sing[0]))
 
     return w_ang
 
