@@ -239,7 +239,7 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
             cand_nbrs = rate_pair_pos.iloc[:, nbr_inds_tt.iloc[cand_point_ind]].copy()
             U, S, VT = np.linalg.svd(cand_nbrs.sub(cand_nbrs.mean(axis=1), axis=0), full_matrices=False) # PCA + weighted angle
             
-            list_PC_tt[cand_point_ind] = dc([U, np.diag(S)]) # weighted angle
+            list_PC_tt[cand_point_ind] = dc([U, S]) # weighted angle
 
         # 4-2. neighbor stimulus
         list_PC_tt_rev = np.zeros((cand_points_tt_rev.shape[1], rate_sorted.shape[0], rate_sorted.shape[0])) 
@@ -248,7 +248,7 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
             cand_nbrs = rate_pair_pos.iloc[:, nbr_inds_tt_rev.iloc[cand_point_ind]].copy()
             U, S, VT = np.linalg.svd(cand_nbrs.sub(cand_nbrs.mean(axis=1), axis=0), full_matrices=False) # PCA + weighted angle
             
-            list_PC_tt_rev[cand_point_ind] = dc([U, np.diag(S)]) # weighted angle
+            list_PC_tt_rev[cand_point_ind] = dc([U, S]) # weighted angle
 
         # Compute weighted angle for close candidate pairs
         list_angles = np.full(len(list_close_pair_inds), np.nan)
