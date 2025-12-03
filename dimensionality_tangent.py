@@ -86,7 +86,6 @@ def compute_eff_dim(sess_ind, n_trial_sampling=10):
     list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
 
     num_trial_types = 119
-    n_trial_sampling = 100
     rng = np.random.default_rng(sess_ind)
 
     list_dim_asis = np.zeros(num_trial_types)
