@@ -129,7 +129,7 @@ def compute_eff_dim(sess_ind, n_trial_sampling=10):
     list_dim_global_asis[1] = ((cf_cen.trace())**2 / np.power(cf_cen, 2).trace()) / rate_sorted.shape[0]
 
     rand_tt_inds = rng.permutation(range(rate.shape[1]))
-    rate = rate_sorted.iloc[:, rand_tt_inds]
+    rate = rate_sorted.iloc[:, rand_tt_inds].copy()
     for t_sam_ind in range(n_trial_sampling):
         rate_sam = np.full_like(rate_sorted_mean_coll, np.nan)
         for trial_type_ind, trial_type in enumerate(all_stm_unique):
@@ -191,7 +191,7 @@ def compute_eff_dim(sess_ind, n_trial_sampling=10):
         cf_cen = np.cov(rate_mean_RRneuron_coll)
         list_dim_global_RRneuron[slope_ind, 1] = ((cf_cen.trace())**2 / np.power(cf_cen, 2).trace()) / rate_sorted.shape[0]
 
-        rate_RRneuron_dr = rate_RRneuron_dr.iloc[:, rand_tt_inds]
+        rate_RRneuron_dr = rate_RRneuron_dr.iloc[:, rand_tt_inds].copy()
         for t_sam_ind in range(n_trial_sampling):
             rate_sam = np.full_like(rate_sorted_mean_coll, np.nan)
             for trial_type_ind, trial_type in enumerate(all_stm_unique):
