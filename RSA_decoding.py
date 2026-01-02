@@ -1004,7 +1004,7 @@ def decode_ABO(sess_ind, decoder_type):
                 X_test = X_test.sub(mean_, axis=1)
 
                 if decoder_type == 'SVM':
-                    clf = svm.SVC(kernel='linear')
+                    clf = svm.SVC(kernel='linear', max_iter=1000)
                 elif decoder_type == 'logit':
                     clf = logit(max_iter=100) # default: L2 regularization, lbfgs solver, C=1
                 elif decoder_type == 'RF':
@@ -1098,7 +1098,7 @@ def decode_ABO(sess_ind, decoder_type):
                     X_test = X_test.sub(mean_, axis=1)
 
                     if decoder_type == 'SVM':
-                        clf = svm.SVC(kernel='linear')
+                        clf = svm.SVC(kernel='linear', max_iter=1000)
                     elif decoder_type == 'logit':
                         clf = logit(max_iter=100) # default: L2 regularization, lbfgs solver, C=1
                     elif decoder_type == 'RF':
@@ -1242,7 +1242,7 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type='SVM'):
                             X_train = X_train.sub(mean_, axis=1) # train data mean centering
                             X_test = X_test.sub(mean_, axis=1)
 
-                            clf_SVC = svm.SVC(kernel='linear')
+                            clf_SVC = svm.SVC(kernel='linear', max_iter=1000)
                             # clf_SVC = svm.SVC(kernel='poly', degree=3)
                             # clf_SVC = svm.SVC(kernel='rbf')
                             
@@ -1327,7 +1327,7 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type='SVM'):
                         X_train = X_train.sub(mean_, axis=1) # train data mean centering
                         X_test = X_test.sub(mean_, axis=1)
 
-                        clf_SVC = svm.SVC(kernel='linear')
+                        clf_SVC = svm.SVC(kernel='linear', max_iter=1000)
                         # clf_SVC = svm.SVC(kernel='poly', degree=3)
                         # clf_SVC = svm.SVC(kernel='rbf')
                         
