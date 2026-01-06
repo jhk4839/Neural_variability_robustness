@@ -283,10 +283,12 @@ def compute_overlap_stimpairs_consis(sess_ind):
         for trial_type_ind, trial_type in enumerate(all_stm_unique):
             pwdist_tt1 = cdist(rate_sorted.loc[neu_div_inds1, trial_type].T, rate_sorted.loc[neu_div_inds1, trial_type].T, 'euclidean')
             pwdist_tt2 = cdist(rate_sorted.loc[neu_div_inds2, trial_type].T, rate_sorted.loc[neu_div_inds2, trial_type].T, 'euclidean')
-            list_pwdist[0, trial_type_ind, 0] = np.percentile(pwdist_tt1, 5)
-            list_pwdist[0, trial_type_ind, 1] = np.mean(pwdist_tt1)
-            list_pwdist[1, trial_type_ind, 0] = np.percentile(pwdist_tt2, 5)
-            list_pwdist[1, trial_type_ind, 1] = np.mean(pwdist_tt2)
+            pwdist_tt1[np.diag_indices(rate_sorted.loc[neu_div_inds1, trial_type].shape[1])] = np.nan
+            pwdist_tt2[np.diag_indices(rate_sorted.loc[neu_div_inds2, trial_type].shape[1])] = np.nan
+            list_pwdist[0, trial_type_ind, 0] = np.nanpercentile(pwdist_tt1, 5)
+            list_pwdist[0, trial_type_ind, 1] = np.nanmean(pwdist_tt1)
+            list_pwdist[1, trial_type_ind, 0] = np.nanpercentile(pwdist_tt2, 5)
+            list_pwdist[1, trial_type_ind, 1] = np.nanmean(pwdist_tt2)
 
         list_overlap_asis = np.full((2, num_trial_types, num_trial_types), np.nan) # 2 neuronal subsets
         list_gap_asis = np.full((2, num_trial_types, num_trial_types), np.nan)
@@ -355,14 +357,16 @@ def compute_overlap_stimpairs_consis(sess_ind):
             # Calculate overlap for all stimulus pairs
 
             # Determine criteria using internal pairwise distance for each stimulus
-            list_pwdist = np.zeros((2, num_trial_types, 2)) 
+            list_pwdist = np.zeros((2, num_trial_types, 2))
             for trial_type_ind, trial_type in enumerate(all_stm_unique):
                 pwdist_tt1 = cdist(rate_RRneuron_dr.loc[neu_div_inds1, trial_type].T, rate_RRneuron_dr.loc[neu_div_inds1, trial_type].T, 'euclidean')
                 pwdist_tt2 = cdist(rate_RRneuron_dr.loc[neu_div_inds2, trial_type].T, rate_RRneuron_dr.loc[neu_div_inds2, trial_type].T, 'euclidean')
-                list_pwdist[0, trial_type_ind, 0] = np.percentile(pwdist_tt1, 5)
-                list_pwdist[0, trial_type_ind, 1] = np.mean(pwdist_tt1)
-                list_pwdist[1, trial_type_ind, 0] = np.percentile(pwdist_tt2, 5)
-                list_pwdist[1, trial_type_ind, 1] = np.mean(pwdist_tt2)
+                pwdist_tt1[np.diag_indices(rate_RRneuron_dr.loc[neu_div_inds1, trial_type].shape[1])] = np.nan
+                pwdist_tt2[np.diag_indices(rate_RRneuron_dr.loc[neu_div_inds2, trial_type].shape[1])] = np.nan
+                list_pwdist[0, trial_type_ind, 0] = np.nanpercentile(pwdist_tt1, 5)
+                list_pwdist[0, trial_type_ind, 1] = np.nanmean(pwdist_tt1)
+                list_pwdist[1, trial_type_ind, 0] = np.nanpercentile(pwdist_tt2, 5)
+                list_pwdist[1, trial_type_ind, 1] = np.nanmean(pwdist_tt2)
 
             for trial_type_ind, trial_type in enumerate(all_stm_unique):
                 for div_ind in range(2):
@@ -445,9 +449,10 @@ def compute_overlap_stimpairs(sess_ind):
     list_pwdist = np.zeros((num_trial_types, 3))
     for trial_type_ind, trial_type in enumerate(all_stm_unique):
         pwdist = cdist(rate_sorted.loc[:, trial_type].T, rate_sorted.loc[:, trial_type].T, 'euclidean')
-        list_pwdist[trial_type_ind, 0] = np.percentile(pwdist, pwdist_thr)
-        list_pwdist[trial_type_ind, 1] = np.percentile(pwdist, 100-pwdist_thr)
-        list_pwdist[trial_type_ind, 2] = np.mean(pwdist)
+        pwdist[np.diag_indices(rate_sorted.loc[:, trial_type].shape[1])] = np.nan
+        list_pwdist[trial_type_ind, 0] = np.nanpercentile(pwdist, pwdist_thr)
+        list_pwdist[trial_type_ind, 1] = np.nanpercentile(pwdist, 100-pwdist_thr)
+        list_pwdist[trial_type_ind, 2] = np.nanmean(pwdist)
 
     list_overlap_asis = np.full((num_trial_types, num_trial_types), np.nan)
     list_gap_asis = np.full((num_trial_types, num_trial_types), np.nan)
@@ -513,9 +518,10 @@ def compute_overlap_stimpairs(sess_ind):
         list_pwdist = np.zeros((num_trial_types, 3))
         for trial_type_ind, trial_type in enumerate(all_stm_unique):
             pwdist = cdist(rate_RRneuron_dr.loc[:, trial_type].T, rate_RRneuron_dr.loc[:, trial_type].T, 'euclidean')
-            list_pwdist[trial_type_ind, 0] = np.percentile(pwdist, pwdist_thr)
-            list_pwdist[trial_type_ind, 1] = np.percentile(pwdist, 100-pwdist_thr)
-            list_pwdist[trial_type_ind, 2] = np.mean(pwdist)
+            pwdist[np.diag_indices(rate_RRneuron_dr.loc[:, trial_type].shape[1])] = np.nan
+            list_pwdist[trial_type_ind, 0] = np.nanpercentile(pwdist, pwdist_thr)
+            list_pwdist[trial_type_ind, 1] = np.nanpercentile(pwdist, 100-pwdist_thr)
+            list_pwdist[trial_type_ind, 2] = np.nanmean(pwdist)
 
         for trial_type_ind, trial_type in enumerate(all_stm_unique):
             n_neighbors = 5
