@@ -274,6 +274,8 @@ def compute_overlap_stimpairs_consis(sess_ind):
         neu_inds_permuted = np.random.permutation(range(rate_sorted.shape[0]))
         neu_div_inds1 = neu_inds_permuted[:int(rate_sorted.shape[0]/2)].copy() # 5:5 partitioning
         neu_div_inds2 = neu_inds_permuted[int(rate_sorted.shape[0]/2):].copy()
+        if neu_div_inds2.shape[0] > neu_div_inds1.shape[0]: # 이 세션의 뉴런 개수가 홀수일 경우
+            neu_div_inds2 = neu_div_inds2[:-1].copy()    
         list_neu_div_inds = dc([neu_div_inds1, neu_div_inds2])
         
         # Calculate overlap for all stimulus pairs
