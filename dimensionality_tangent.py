@@ -90,7 +90,7 @@ def compute_eff_dim(sess_ind, n_trial_sampling=10):
 
     list_dim_asis = np.zeros(num_trial_types)
     list_dim_RRneuron = np.zeros((len(list_target_slopes), num_trial_types))
-    list_dim_global_asis = np.zeros(2) # all trials, centroids 3개
+    list_dim_global_asis = np.zeros(2) # all trials, centroids 2개
     list_dim_global_RRneuron = np.zeros((len(list_target_slopes), 2))
     list_dim_sam_asis = np.zeros(n_trial_sampling)
     list_dim_sam_RRneuron = np.zeros((len(list_target_slopes), n_trial_sampling))
@@ -215,6 +215,143 @@ def compute_eff_dim(sess_ind, n_trial_sampling=10):
     print("Ended Process", c_proc.name)
 
 # %%
+# Effective dimensionality (HVA)
+def compute_eff_dim_HVA(sess_ind, n_trial_sampling=10):
+
+    c_proc = mp.current_process()
+    print("Running on Process", c_proc.name, "PID", c_proc.pid)
+
+    list_target_slopes = np.linspace(0, 2, 21, endpoint=True)
+
+    num_trial_types = 119
+    rng = np.random.default_rng(sess_ind)
+
+    list_HVA_names = ['VISl', 'VISrl', 'VISal', 'VISpm', 'VISam']
+
+    list_dim_asis_HVA = {hva: np.zeros(num_trial_types) for hva in list_HVA_names}
+    list_dim_RRneuron_HVA = {hva: np.zeros((len(list_target_slopes), num_trial_types)) for hva in list_HVA_names}
+    list_dim_global_asis_HVA = {hva: np.zeros(2) for hva in list_HVA_names} # all trials, centroids 2개
+    list_dim_global_RRneuron_HVA = {hva: np.zeros((len(list_target_slopes), 2)) for hva in list_HVA_names}
+    list_dim_sam_asis_HVA = {hva: np.zeros(n_trial_sampling) for hva in list_HVA_names}
+    list_dim_sam_RRneuron_HVA = {hva: np.zeros((len(list_target_slopes), n_trial_sampling)) for hva in list_HVA_names}
+
+    for area_ind, area in enumerate(list_HVA_names):
+        rate = list_rate_all_HVA[area][sess_ind].copy()
+
+        if np.any(rate) == True: # neuron이 있을 때
+            rate_sorted = rate.sort_index(axis=1)
+            stm = rate_sorted.columns.copy()
+
+            # Multiply by delta t to convert to spike counts
+            rate_sorted = rate_sorted * 0.25
+
+            # Create a counting dictionary for each stimulus
+            all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True)
+            stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
+
+            # Compute mean & variance for each stimulus
+            rate_sorted_mean, rate_sorted_var = compute_mean_var_trial(stm_cnt_dict, rate_sorted)
+            rate_sorted_mean_coll, rate_sorted_var_coll = compute_mean_var_trial_collapse(stm_cnt_dict, rate_sorted)
+
+            list_slopes_dr = pd.DataFrame(list_slopes_all_an_loglog_HVA[area][sess_ind],
+                                          columns=rate_sorted_mean_coll.columns).copy()
+
+            # pca
+            n_components = rate_sorted.shape[0]
+            pca = PCA(n_components=n_components)
+
+            # Compute effective dimensionality for each stimulus
+            for trial_type_ind, trial_type in enumerate(all_stm_unique):
+                cf = np.cov(rate_sorted.loc[:, trial_type])
+                list_dim_asis_HVA[area][trial_type_ind] = ((cf.trace())**2 / np.power(cf, 2).trace()) / rate_sorted.shape[0]
+            cf_all = np.cov(rate_sorted)
+            list_dim_global_asis_HVA[area][0] = ((cf_all.trace())**2 / np.power(cf_all, 2).trace()) / rate_sorted.shape[0]
+            cf_cen = np.cov(rate_sorted_mean_coll)
+            list_dim_global_asis_HVA[area][1] = ((cf_cen.trace())**2 / np.power(cf_cen, 2).trace()) / rate_sorted.shape[0]
+
+            rand_tt_inds = rng.permutation(range(rate.shape[1]))
+            rate = rate_sorted.iloc[:, rand_tt_inds].copy()
+            for t_sam_ind in range(n_trial_sampling):
+                rate_sam = np.full_like(rate_sorted_mean_coll, np.nan)
+                for trial_type_ind, trial_type in enumerate(all_stm_unique):
+                    rate_tt = rate.loc[:, trial_type].copy()
+                    rate_sam[:, trial_type_ind] = rate_tt.iloc[:, rng.choice(range(rate_tt.shape[1]), 1)[0]].copy()
+                cf_sam = np.cov(rate_sam)
+                list_dim_sam_asis_HVA[area][t_sam_ind] = ((cf_sam.trace())**2 / np.power(cf_sam, 2).trace()) / rate_sorted.shape[0]
+
+            # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
+            rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
+            rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
+
+            for slope_ind, target_slope in enumerate(list_target_slopes):
+                print(f'target_slope = {target_slope:.1f}')
+
+                # calculate target variance
+                var_estim_dr = pd.DataFrame(np.zeros((1, rate_sorted_var_coll.shape[1])), \
+                                        columns=rate_sorted_var_coll.columns)
+                for trial_type in rate_sorted_var_coll.columns:
+                    var_estim_dr.loc[:, trial_type] = \
+                        np.nanmean(rate_sorted_var.loc[:, trial_type].values.flatten()) # nanmean
+                # var_estim_dr = np.repeat(var_estim_dr, all_stm_counts, axis=1)
+                # print(var_estim_dr)
+
+                # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
+                # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed
+                offset = pow(10, (list_slopes_dr.iloc[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr.iloc[1, :])
+
+                var_rs_noisy = \
+                    pow(10, np.log10(rate_sorted_var_coll).sub(list_slopes_dr.iloc[1, :], axis=1)\
+                        .div(list_slopes_dr.iloc[0, :], axis=1).mul(target_slope).add(np.log10(np.array(offset)), axis=1)) # collapsed
+                var_rs_noisy = np.repeat(np.array(var_rs_noisy), all_stm_counts, axis=1)
+
+                # Compute changed residual and add back to the mean            
+                rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
+                # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
+                #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
+                rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
+                    .mul(np.sqrt(var_rs_noisy))
+                # print(rate_resid_RRneuron_dr)
+                rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
+                rate_RRneuron_dr[rate_RRneuron_dr.isna()] = 0 # convert NaN to 0! 
+
+                # Compute mean and variance of slope-changed data
+                rate_mean_RRneuron_coll, rate_var_RRneuron_coll = \
+                    compute_mean_var_trial_collapse(stm_cnt_dict, rate_RRneuron_dr)
+                # FF_RRneuron = rate_var_RRneuron_dr.div(rate_mean_RRneuron_dr)
+                # print(FF_RRneuron)
+                # print(rate_var_RRneuron_dr)
+                
+                # 1. Use covariance matrix
+                
+                # Compute effective dimensionality for each stimulus
+                for trial_type_ind, trial_type in enumerate(all_stm_unique):
+                    cf = np.cov(rate_RRneuron_dr.loc[:, trial_type])
+                    list_dim_RRneuron_HVA[area][slope_ind, trial_type_ind] = ((cf.trace())**2 / np.power(cf, 2).trace()) / rate_RRneuron_dr.shape[0]
+                cf_all = np.cov(rate_RRneuron_dr)
+                list_dim_global_RRneuron_HVA[area][slope_ind, 0] = ((cf_all.trace())**2 / np.power(cf_all, 2).trace()) / rate_sorted.shape[0]
+                cf_cen = np.cov(rate_mean_RRneuron_coll)
+                list_dim_global_RRneuron_HVA[area][slope_ind, 1] = ((cf_cen.trace())**2 / np.power(cf_cen, 2).trace()) / rate_sorted.shape[0]
+
+                rate_RRneuron_dr = rate_RRneuron_dr.iloc[:, rand_tt_inds].copy()
+                for t_sam_ind in range(n_trial_sampling):
+                    rate_sam = np.full_like(rate_sorted_mean_coll, np.nan)
+                    for trial_type_ind, trial_type in enumerate(all_stm_unique):
+                        rate_tt = rate_RRneuron_dr.loc[:, trial_type].copy()
+                        rate_sam[:, trial_type_ind] = rate_tt.iloc[:, rng.choice(range(rate_tt.shape[1]), 1)[0]].copy()
+                    cf_sam = np.cov(rate_sam)
+                    list_dim_sam_RRneuron_HVA[area][slope_ind, t_sam_ind] = ((cf_sam.trace())**2 / np.power(cf_sam, 2).trace()) / rate_sorted.shape[0]
+
+    # Save into a file
+    filename = 'eff_dim_DC_ABO_HVA_' + str(sess_ind) + '.pickle'
+    with open(filename, "wb") as f:
+        pickle.dump({'tree_variables': ['list_dim_asis_HVA', 'list_dim_RRneuron_HVA', 'list_dim_global_asis_HVA',
+                                        'list_dim_global_RRneuron_HVA', 'list_dim_sam_asis_HVA', 'list_dim_sam_RRneuron_HVA'],
+                    'list_dim_asis_HVA': list_dim_asis_HVA, 'list_dim_RRneuron_HVA': list_dim_RRneuron_HVA, 'list_dim_global_asis_HVA': list_dim_global_asis_HVA,
+                    'list_dim_global_RRneuron_HVA': list_dim_global_RRneuron_HVA, 'list_dim_sam_asis_HVA': list_dim_sam_asis_HVA, 'list_dim_sam_RRneuron_HVA': list_dim_sam_RRneuron_HVA}, f)
+
+    print("Ended Process", c_proc.name)
+
+# %%
 # Function to compute orthogonal & parallel distance
 def compute_orth_par_dist(manifold_name1, manifold_name2, rate_12, rate_sorted_mean_coll):
     mean_vector = rate_sorted_mean_coll.loc[:, manifold_name2] - rate_sorted_mean_coll.loc[:, manifold_name1] # mean vector
@@ -279,7 +416,6 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
         adj_tt = rate_sorted_mean_coll.columns[adj_tt_ind]
 
         # 2. Compute orthogonal distance
-
         rate_pair = rate_sorted.loc[:, [trial_type, adj_tt]].copy()
         rate_sorted_mean_coll_pair = rate_sorted_mean_coll.loc[:, [trial_type, adj_tt]].copy()
 
@@ -347,7 +483,6 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
             list_close_pair_inds = []
 
         # 4. Compute tangent space angles
-        
         n_neighbors = 5 # knn
         nbrs = NearestNeighbors(n_neighbors=n_neighbors)
         
@@ -358,22 +493,20 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
         nbr_inds_tt = nbr_inds.loc[trial_type].loc[cand_inds].copy()
         nbr_inds_tt_rev = nbr_inds.loc[adj_tt].loc[cand_inds_rev].copy()
 
-        # 4-1. current stimulus
+        # current stimulus
         list_PC_tt = np.zeros((cand_points_tt.shape[1], rate_sorted.shape[0], rate_sorted.shape[0])) 
         list_PC_tt = np.empty(cand_points_tt.shape[1], dtype=object) # weighted angle
         for cand_point_ind in range(cand_points_tt.shape[1]):
             cand_nbrs = rate_pair_pos.iloc[:, nbr_inds_tt.iloc[cand_point_ind]].copy()
             U, S, VT = np.linalg.svd(cand_nbrs.sub(cand_nbrs.mean(axis=1), axis=0), full_matrices=False) # PCA + weighted angle
-            
             list_PC_tt[cand_point_ind] = dc([U, S]) # weighted angle
 
-        # 4-2. neighbor stimulus
+        # neighbor stimulus
         list_PC_tt_rev = np.zeros((cand_points_tt_rev.shape[1], rate_sorted.shape[0], rate_sorted.shape[0])) 
         list_PC_tt_rev = np.empty(cand_points_tt_rev.shape[1], dtype=object) # weighted angle
         for cand_point_ind in range(cand_points_tt_rev.shape[1]):
             cand_nbrs = rate_pair_pos.iloc[:, nbr_inds_tt_rev.iloc[cand_point_ind]].copy()
             U, S, VT = np.linalg.svd(cand_nbrs.sub(cand_nbrs.mean(axis=1), axis=0), full_matrices=False) # PCA + weighted angle
-            
             list_PC_tt_rev[cand_point_ind] = dc([U, S]) # weighted angle
 
         # Compute weighted angle for close candidate pairs
@@ -382,7 +515,7 @@ def compute_tangent_angle(rate_sorted, rate_sorted_mean_coll, mean_dist_mat_asis
             try:
                 cand1, cand2 = close_pair_ind
                 list_angles[ind] = weighted_angle(list_PC_tt[cand1][0], list_PC_tt_rev[cand2][0],
-                                                    list_PC_tt[cand1][1], list_PC_tt_rev[cand2][1]) 
+                                                  list_PC_tt[cand1][1], list_PC_tt_rev[cand2][1])
             except:
                 list_angles[ind] = np.nan
 
@@ -516,6 +649,14 @@ with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
     list_slopes_all_an_loglog = resp_matrix_ep_RS_all['list_slopes_all_an_loglog'].copy()
 
     sess_inds_qual_all = resp_matrix_ep_RS_all['sess_inds_qual_all'].copy()
+
+# ABO higher visual areas
+with open('resp_matrix_ep_HVA_allensdk.pickle', 'rb') as f:
+    resp_matrix_ep_HVA_allensdk = pickle.load(f)
+
+    list_rate_all_HVA = dc(resp_matrix_ep_HVA_allensdk['list_rate_all_HVA'])
+    list_slopes_all_an_loglog_HVA = dc(resp_matrix_ep_HVA_allensdk['list_slopes_all_an_loglog_HVA'])
+    list_empty_sess2 = dc(resp_matrix_ep_HVA_allensdk['list_empty_sess2'])
 
 # %%
 # multiprocessing

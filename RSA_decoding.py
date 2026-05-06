@@ -310,7 +310,6 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type='cos_sim')
     print("Ended Process", c_proc.name)
 
 # %%
-# %%
 # RSA across session pairs (ABO Neuropixels, RRneuron)
 
 def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type='cos_sim'):
