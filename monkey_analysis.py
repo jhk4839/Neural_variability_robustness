@@ -9,6 +9,7 @@ import pickle
 import os
 import warnings
 import multiprocessing as mp
+import gzip
 
 import numpy as np
 import pandas as pd
@@ -290,8 +291,8 @@ def decode_Ecker(sess_ind, decoder_type):
             # print(f'sess_ind: {sess_ind}, rescale r {rf}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = decoder_type + '_decoding_Ecker_allstim_pooled_neutrialresamp_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = decoder_type + '_decoding_Ecker_allstim_pooled_neutrialresamp_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['mean_confusion_test_asis', 'mean_accuracy_asis', 'list_mean_confusion_test_RRneuron', 'list_mean_accuracy_RRneuron'],
                      'mean_confusion_test_asis': mean_confusion_test_asis, 'mean_accuracy_asis': mean_accuracy_asis,
                      'list_mean_confusion_test_RRneuron': list_mean_confusion_test_RRneuron, 'list_mean_accuracy_RRneuron': list_mean_accuracy_RRneuron}, f)
@@ -448,8 +449,8 @@ def RSA_across_sesspairs_Ecker(sess_ind, similarity_type):
             print(f'session {sess_ind}, target slope {target_slope:.1f}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = 'RSM_Ecker_allneu_pooled_neutrialresamp_' + similarity_type + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_Ecker_allneu_pooled_neutrialresamp_' + similarity_type + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis', 'list_rate_RRneuron_dr', 'list_RSM_mean_RRneuron'], \
                      'list_RSM_mean_asis': list_RSM_mean_asis, 'list_rate_RRneuron_dr': list_rate_RRneuron_dr, 'list_RSM_mean_RRneuron': list_RSM_mean_RRneuron}, f)
 
@@ -641,8 +642,8 @@ def RSA_withinsess_Ecker(sess_ind, similarity_type):
                 print(f'session {sess_ind}, neu_sample_ind {neu_sample_ind}, target slope {target_slope:.1f}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = 'RSM_corr_withinsess_Ecker_pooled_neutrialresamp_' + similarity_type + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_corr_withinsess_Ecker_pooled_neutrialresamp_' + similarity_type + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis', 'list_corr_withinsess2'], \
                     'list_corr_withinsess_asis': list_corr_withinsess_asis, 'list_corr_withinsess2': list_corr_withinsess2}, f)
         
@@ -775,8 +776,8 @@ def compute_eff_dim(sess_ind, n_trial_sampling=100):
         #     list_dim_RRneuron[slope_ind, trial_type_ind] = (np.sum(pca.explained_variance_))**2 / np.sum(pca.explained_variance_**2)
 
     # Save into a file
-    filename = 'eff_dim_DC_Ecker_pooled_neutrialresamp_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'eff_dim_DC_Ecker_pooled_neutrialresamp_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_dim_asis', 'list_dim_RRneuron', 'list_dim_global_asis', 'list_dim_global_RRneuron', 'list_dim_sam_asis', 'list_dim_sam_RRneuron'],
                     'list_dim_asis': list_dim_asis, 'list_dim_RRneuron': list_dim_RRneuron, 'list_dim_global_asis': list_dim_global_asis, 'list_dim_global_RRneuron': list_dim_global_RRneuron,
                     'list_dim_sam_asis': list_dim_sam_asis, 'list_dim_sam_RRneuron': list_dim_sam_RRneuron}, f)
@@ -785,7 +786,7 @@ def compute_eff_dim(sess_ind, n_trial_sampling=100):
 
 # %%
 # loading variables
-with open('resp_matrix_ep_all_Ecker.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_all_Ecker.pickle.gz', 'rb') as f:
     resp_matrix_ep_all = pickle.load(f)
 
     list_rate_all = resp_matrix_ep_all['list_rate_all'].copy()

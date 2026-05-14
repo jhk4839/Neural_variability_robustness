@@ -1018,7 +1018,7 @@ class ClusteredNetwork:
         adjmat[source_inds, target_inds] = weights
         
         if PathSpikes is not None:
-            with open(PathSpikes, "wb") as outfile:
+            with gzip.open(PathSpikes, "wb") as outfile:
                 pickle.dump(spiketimes, outfile)
         return {
             "e_rate": e_rate,

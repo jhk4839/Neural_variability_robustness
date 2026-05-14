@@ -6,6 +6,7 @@ import hdf5storage as st
 import pickle
 import os
 from time import time
+import gzip
 
 import multiprocessing as mp
 
@@ -267,9 +268,9 @@ def compute_overlap_stimpairs_consis(sess_ind):
         list_gap_RRneuron3[sampling_ind] = list_gap_RRneuron2.copy()
 
     # Save into a file
-    filename = 'overlap_nbr_stimpairs_consis_ABO_' + str(sess_ind) +  '.pickle'
-    filename = 'overlap_nbr_stimpairs_consis_ABO_fr_' + str(sess_ind) +  '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'overlap_nbr_stimpairs_consis_ABO_' + str(sess_ind) +  '.pickle.gz'
+    filename = 'overlap_nbr_stimpairs_consis_ABO_fr_' + str(sess_ind) +  '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_overlap_asis2', 'list_overlap_RRneuron3', 'list_gap_asis2', 'list_gap_RRneuron3'],
                      'list_overlap_asis2': list_overlap_asis2, 'list_overlap_RRneuron3': list_overlap_RRneuron3,
                      'list_gap_asis2': list_gap_asis2, 'list_gap_RRneuron3': list_gap_RRneuron3}, f)
@@ -460,10 +461,10 @@ def compute_overlap_stimpairs(sess_ind, box_size=None):
         print(f'sess_ind {sess_ind}, target slope {target_slope:.1f}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = 'overlap_nbr_stimpairs_ABO_' + str(sess_ind) +  '.pickle'
-    filename = 'overlap_nbr_stimpairs_ABO_fr_' + str(sess_ind) +  '.pickle'
-    filename = 'overlap_nbr_stimpairs_ABO_shuf_' + str(sess_ind) +  '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'overlap_nbr_stimpairs_ABO_' + str(sess_ind) +  '.pickle.gz'
+    filename = 'overlap_nbr_stimpairs_ABO_fr_' + str(sess_ind) +  '.pickle.gz'
+    filename = 'overlap_nbr_stimpairs_ABO_shuf_' + str(sess_ind) +  '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_overlap_asis', 'list_overlap_RRneuron2', 'list_gap_asis', 'list_gap_RRneuron2'],
                      'list_overlap_asis': list_overlap_asis, 'list_overlap_RRneuron2': list_overlap_RRneuron2,
                      'list_gap_asis': list_gap_asis, 'list_gap_RRneuron2': list_gap_RRneuron2}, f)
@@ -476,7 +477,7 @@ def compute_overlap_stimpairs(sess_ind, box_size=None):
 # loading variables
 
 # ABO Neuropixels
-with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_RS_all_32sess_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_RS = resp_matrix_ep_RS_all['list_rate_RS'].copy()

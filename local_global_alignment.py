@@ -5,6 +5,7 @@ import hdf5storage as st
 # from pymatreader import read_mat
 import pickle
 import os
+import gzip
 
 import multiprocessing as mp
 
@@ -272,8 +273,8 @@ def compute_cos_sim_pc1_adj_ABO(slope_ind, target_slope, adjacency_type='geodesi
         list_cos_sim_pc1_global_RRneuron2[sess_ind] = list_cos_sim_pc1_global_RRneuron.copy()
 
     # Save into a file
-    filename = 'align_pc1_ABO_' + adjacency_type + str(slope_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'align_pc1_ABO_' + adjacency_type + str(slope_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_cos_sim_pc1_adj2', 'list_cos_sim_pc1_ori2', 'list_cos_sim_pc1_global2',
                                         'list_cos_sim_pc1_adj_RRneuron2', 'list_cos_sim_pc1_ori_RRneuron2', 'list_cos_sim_pc1_global_RRneuron2'],
                                         'list_cos_sim_pc1_adj2': list_cos_sim_pc1_adj2, 'list_cos_sim_pc1_ori2': list_cos_sim_pc1_ori2, 'list_cos_sim_pc1_global2': list_cos_sim_pc1_global2,
@@ -286,7 +287,7 @@ def compute_cos_sim_pc1_adj_ABO(slope_ind, target_slope, adjacency_type='geodesi
 # loading variables
 
 # ABO Neuropixels
-with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_RS_all_32sess_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_RS = resp_matrix_ep_RS_all['list_rate_RS'].copy()

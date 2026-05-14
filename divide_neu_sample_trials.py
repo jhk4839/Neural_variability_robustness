@@ -9,6 +9,7 @@ import pickle
 import os
 import warnings
 import multiprocessing as mp
+import gzip
 
 import numpy as np
 import pandas as pd
@@ -147,8 +148,8 @@ def unit_rfmet(sess_ind):
         # list_onscreen[neu_ind] = on_screen
 
     # Save into a file
-    filename = 'unit_rf_metrics' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'unit_rf_metrics' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': 'list_rfmet', 'list_rfmet': list_rfmet}, f)
 
     print("Ended Process", c_proc.name)
@@ -273,8 +274,8 @@ def decode_divneu(sess_ind, decoder_type):
         # print(round(mean_accuracy, ndigits=3))
 
     # Save into a file
-    filename = decoder_type + '_decoding_divneu_allstim_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = decoder_type + '_decoding_divneu_allstim_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['mean_confusion_test_asis', 'mean_accuracy_asis'],
                      'mean_confusion_test_asis': mean_confusion_test_asis, 'mean_accuracy_asis': mean_accuracy_asis}, f)
                 
@@ -504,9 +505,9 @@ def RSA_across_sesspairs_ABO_rf(slope_ind, target_slope, similarity_type):
             list_corr_sesspair[pair_ind, div_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
-    filename = 'RSM_corr_sesspair_ABO_allneu_rf_lr_' + similarity_type + str(slope_ind) + '.pickle'
-    filename = 'RSM_corr_sesspair_ABO_allneu_rf_ud_' + similarity_type + str(slope_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_corr_sesspair_ABO_allneu_rf_lr_' + similarity_type + str(slope_ind) + '.pickle.gz'
+    filename = 'RSM_corr_sesspair_ABO_allneu_rf_ud_' + similarity_type + str(slope_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis', 'list_corr_sesspair_asis', 'list_rate_RRneuron_dr', 'list_RSM_mean_RRneuron', 'list_corr_sesspair'], \
                      'list_RSM_mean_asis': list_RSM_mean_asis, 'list_corr_sesspair_asis': list_corr_sesspair_asis,
                      'list_rate_RRneuron_dr': list_rate_RRneuron_dr, 'list_RSM_mean_RRneuron': list_RSM_mean_RRneuron, 'list_corr_sesspair': list_corr_sesspair}, f)
@@ -600,8 +601,8 @@ def RSA_across_sesspairs_ABO_divneu(sess_ind, similarity_type):
         list_RSM_mean_asis[div_ind] = RSM_mean.copy()
 
     # Save into a file
-    filename = 'RSM_divneu_allneu_' + similarity_type + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_divneu_allneu_' + similarity_type + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': 'list_RSM_mean_asis', 'list_RSM_mean_asis': list_RSM_mean_asis}, f)
 
     print("Ended Process", c_proc.name)
@@ -824,9 +825,9 @@ def RSA_withinsess_ABO_rf(slope_ind, target_slope, similarity_type):
             list_corr_withinsess2[sess_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
-    filename = 'RSM_corr_withinsess_ABO_rf_lr_' + similarity_type + str(slope_ind) + '.pickle'
-    filename = 'RSM_corr_withinsess_ABO_rf_ud_' + similarity_type + str(slope_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_corr_withinsess_ABO_rf_lr_' + similarity_type + str(slope_ind) + '.pickle.gz'
+    filename = 'RSM_corr_withinsess_ABO_rf_ud_' + similarity_type + str(slope_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis2', 'list_corr_withinsess2'], \
                     'list_corr_withinsess_asis2': list_corr_withinsess_asis2, 'list_corr_withinsess2': list_corr_withinsess2}, f)
         
@@ -942,8 +943,8 @@ def RSA_withinsess_ABO_divneu(sess_ind, similarity_type):
             list_corr_withinsess_asis[div_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
-    filename = 'RSM_corr_withinsess_divneu_' + similarity_type + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:      
+    filename = 'RSM_corr_withinsess_divneu_' + similarity_type + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:      
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis', 'list_RSM_neu1_all', 'list_RSM_neu2_all'], \
                     'list_corr_withinsess_asis': list_corr_withinsess_asis, 'list_RSM_neu1_all': list_RSM_neu1_all, 'list_RSM_neu2_all': list_RSM_neu2_all}, f)
         
@@ -1168,8 +1169,8 @@ def RSA_withinsess_ABO_vis(slope_ind, target_slope, similarity_type):
                 print(f'target slope {target_slope:.1f}, area_pair_ind {area_pair_ind}/{len(vis_pairs)-1}, sess_ind: {sess_ind}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = 'RSM_corr_withinsess_ABO_vis_' + similarity_type + str(slope_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_corr_withinsess_ABO_vis_' + similarity_type + str(slope_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis3', 'list_corr_withinsess3'], \
                     'list_corr_withinsess_asis3': list_corr_withinsess_asis3, 'list_corr_withinsess3': list_corr_withinsess3}, f)
         
@@ -1246,8 +1247,8 @@ def compute_eff_dim(sess_ind, n_trial_sampling=100):
             list_dim_sam_asis[div_ind, t_sam_ind] = ((np.trace(cf_sam)**2) / np.trace(cf_sam @ cf_sam)) / rate_sorted.shape[0]
 
     # Save into a file
-    filename = 'eff_dim_DC_divneu_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'eff_dim_DC_divneu_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_dim_asis', 'list_dim_global_asis', 'list_dim_sam_asis'],
                     'list_dim_asis': list_dim_asis, 'list_dim_global_asis': list_dim_global_asis, 'list_dim_sam_asis': list_dim_sam_asis}, f)
 
@@ -1336,8 +1337,8 @@ def fit_slopes_divneu(sess_ind):
             slopes[div_ind, :, trial_type_ind] = popt.copy()
     
     # Save into a file
-    filename = 'slopes_divneu_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'slopes_divneu_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['slopes', 'list_neu_div_inds'],
                     'slopes': slopes, 'list_neu_div_inds': list_neu_div_inds}, f)
 
@@ -1543,8 +1544,8 @@ def compute_overlap_stimpairs_consis(sess_ind, n_trial_sampling=10):
                     print(f'sess_ind {sess_ind}, sampling_ind {sampling_ind}, target slope {target_slope:.1f}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = 'overlap_nbr_stimpairs_consis_ABO_sam_cpu_' + str(sess_ind) +  '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'overlap_nbr_stimpairs_consis_ABO_sam_cpu_' + str(sess_ind) +  '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_overlap_asis2', 'list_overlap_RRneuron3'],
                      'list_overlap_asis2': list_overlap_asis2, 'list_overlap_RRneuron3': list_overlap_RRneuron3}, f)
                 
@@ -1774,8 +1775,8 @@ def compute_overlap_stimpairs_consis_gpu(sess_ind, n_trial_sampling=10):
             print(f"sess_ind {sess_ind}, sampling_ind {sampling_ind}, target_slope {target_slope:.1f}, duration {((time() - start_time)/60):.2f} min")
 
     # Save
-    filename = 'overlap_nbr_stimpairs_consis_ABO_sam_' + str(sess_ind) +  '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'overlap_nbr_stimpairs_consis_ABO_sam_' + str(sess_ind) +  '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_overlap_asis2', 'list_overlap_RRneuron3'],
                      'list_overlap_asis2': list_overlap_asis2, 'list_overlap_RRneuron3': list_overlap_RRneuron3}, f)
 
@@ -1969,8 +1970,8 @@ def compute_overlap_stimpairs_trials(sess_ind, n_trial_sampling=10):
         print(f'sess_ind {sess_ind}, target_slope {target_slope:.1f}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = 'overlap_nbr_stimpairs_ABO_sam_' + str(sess_ind) +  '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'overlap_nbr_stimpairs_ABO_sam_' + str(sess_ind) +  '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         # pickle.dump({'tree_variables': ['list_overlap_asis', 'list_gap_asis'],
         #              'list_overlap_asis': list_overlap_asis, 'list_gap_asis': list_gap_asis}, f)
         pickle.dump({'tree_variables': ['list_overlap_asis', 'list_overlap_RRneuron2'],
@@ -2061,8 +2062,8 @@ def compute_overlap_stimpairs_divneu(sess_ind):
         list_size_scc_asis[div_ind] = size_scc_asis
 
     # Save into a file
-    filename = 'overlap_nbr_stimpairs_ABO_divneu_' + str(sess_ind) +  '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'overlap_nbr_stimpairs_ABO_divneu_' + str(sess_ind) +  '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_overlap_asis2', 'list_size_scc_asis'],
                      'list_overlap_asis2': list_overlap_asis2, 'list_size_scc_asis': list_size_scc_asis}, f)
 
@@ -2072,7 +2073,7 @@ def compute_overlap_stimpairs_divneu(sess_ind):
 # loading variables
 
 # ABO Neuropixels
-with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_RS_all_32sess_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_RS = resp_matrix_ep_RS_all['list_rate_RS'].copy()
@@ -2084,7 +2085,7 @@ with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
     list_slopes_all_an_loglog = resp_matrix_ep_RS_all['list_slopes_all_an_loglog'].copy()
 
 # ABO higher visual areas
-with open('resp_matrix_ep_HVA_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_HVA_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_HVA_allensdk = pickle.load(f)
 
     list_rate_all_HVA = dc(resp_matrix_ep_HVA_allensdk['list_rate_all_HVA'])
@@ -2092,26 +2093,26 @@ with open('resp_matrix_ep_HVA_allensdk.pickle', 'rb') as f:
     list_empty_sess2 = dc(resp_matrix_ep_HVA_allensdk['list_empty_sess2'])
     list_num_neurons_HVA = dc(resp_matrix_ep_HVA_allensdk['list_num_neurons_HVA'])
 
-with open('resp_matrix_ep_naturalmovie_FC_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_naturalmovie_FC_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_naturalmovie = pickle.load(f)
 
     brain_observatory_sessid = resp_matrix_ep_naturalmovie['brain_observatory_sessid'].copy()
     list_sess_ids = resp_matrix_ep_naturalmovie['list_sess_ids'].copy()
 
-with open('resp_matrix_ep_spt_BO_all_32sess_gpu.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_spt_BO_all_32sess_gpu.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_spt_BO_all = resp_matrix_ep_RS_all['list_rate_spt_BO_all'].copy()
 
-with open('unit_ids.pickle', 'rb') as f:
+with gzip.open('unit_ids.pickle.gz', 'rb') as f:
     unit_ids_load = pickle.load(f)
 
     list_unit_ids_visp = unit_ids_load['list_unit_ids_visp'].copy()
     list_sess_data = unit_ids_load['list_sess_data'].copy()
 
 # receptive field metrics for each V1 unit
-save_file_name = 'unit_rf_metrics_all.pickle'
-with open(save_file_name, 'rb') as f:
+save_file_name = 'unit_rf_metrics_all.pickle.gz'
+with gzip.open(save_file_name, 'rb') as f:
     unit_rf_metrics_all = pickle.load(f)
     list_rfmet2 = unit_rf_metrics_all['list_rfmet2'].copy()
     list_num_neurons_lr = unit_rf_metrics_all['list_num_neurons_lr'].copy()
@@ -2122,7 +2123,7 @@ list_rfmet2 = list_rfmet2[np.isin(list_sess_ids, brain_observatory_sessid)]
 list_num_neurons_lr = list_num_neurons_lr[np.isin(list_sess_ids, brain_observatory_sessid)]
 list_num_neurons_ud = list_num_neurons_ud[np.isin(list_sess_ids, brain_observatory_sessid)]
 
-with open('invalid_unit_sess.pickle', 'rb') as f:
+with gzip.open('invalid_unit_sess.pickle.gz', 'rb') as f:
     invalid_unit_sess = pickle.load(f)
 
     list_invalid_units_visp = invalid_unit_sess['list_invalid_units_visp'].copy()
@@ -2131,9 +2132,9 @@ with open('invalid_unit_sess.pickle', 'rb') as f:
     list_invalid_sess_HVA = invalid_unit_sess['list_invalid_sess_HVA'].copy()
     sess_inds_mapBO = invalid_unit_sess['sess_inds_mapBO'].copy()
 
-save_file_name = 'slopes_divneu_all.pickle' # intercept per neuron
-save_file_name = 'slopes_divneu_all2.pickle' # spontaneous FF
-with open(save_file_name, 'rb') as f:
+save_file_name = 'slopes_divneu_all.pickle.gz' # intercept per neuron
+save_file_name = 'slopes_divneu_all2.pickle.gz' # spontaneous FF
+with gzip.open(save_file_name, 'rb') as f:
     slopes_divneu_all = pickle.load(f)
     list_slopes_all_an_loglog_divneu = slopes_divneu_all['list_slopes_all_an_loglog_divneu'].copy()
     list_neu_div_inds2 = slopes_divneu_all['list_neu_div_inds2'].copy()

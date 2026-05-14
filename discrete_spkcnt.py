@@ -13,6 +13,7 @@ import multiprocessing as mp
 import joblib
 from joblib import Parallel, delayed
 import contextlib
+import gzip
 
 import numpy as np
 import pandas as pd
@@ -570,10 +571,10 @@ def fit_discrete_models(sess_ind, mode='mean'):
                 start = time()
 
     # Save into a file
-    filename = 'poisson_fit_rp_sep_ABO_' + str(sess_ind) + '.pickle'
-    filename = 'poisson_fit_rp_semipool_ABO_' + str(sess_ind) + '.pickle'
-    filename = 'poisson_fit_lll_nbp_ABO_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'poisson_fit_rp_sep_ABO_' + str(sess_ind) + '.pickle.gz'
+    filename = 'poisson_fit_rp_semipool_ABO_' + str(sess_ind) + '.pickle.gz'
+    filename = 'poisson_fit_lll_nbp_ABO_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         # pickle.dump({'tree_variables': ['list_r_estim_neu', 'list_p_estim_neu'],
         #              'list_r_estim_neu': list_r_estim_neu, 'list_p_estim_neu': list_p_estim_neu}, f)
         
@@ -796,9 +797,9 @@ def sample_spkcnt_copula(sess_ind, method, n_samples, model='negbinom'):
     # Save into a file
     if not use_rrep: # one r for each combination of neuron and stimulus
         method += '_rcomb'
-    filename = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_' + str(sess_ind) + '.pickle'
-    # filename = 'rate_poiss_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_' + str(sess_ind) + '.pickle.gz'
+    # filename = 'rate_poiss_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': 'list_rate_nb', 'list_rate_nb': list_rate_nb}, f)
         # pickle.dump({'tree_variables': 'list_rate_poiss', 'list_rate_poiss': list_rate_poiss}, f)
            
@@ -938,8 +939,8 @@ def sample_spkcnt_indep(sess_ind, n_samples, model='katz'):
                 print(f'sess_ind {sess_ind}, target_slope {target_slope:.1f} duration {(time() - start_time)/60:.2f} min')
                     
     # Save into a file
-    filename = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_rate_katz_asis', 'list_rate_katz_RRneuron'],
                      'list_rate_katz_asis': list_rate_katz_asis, 'list_rate_katz_RRneuron': list_rate_katz_RRneuron}, f)
            
@@ -977,25 +978,25 @@ def decode_ABO(sess_ind, decoder_type, method='resc_r', n_samples=50, use_rrep=T
         # NB+P
         if not use_rrep: # one r for each combination of neuron and stimulus
             method += '_rcomb'
-        file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
-        with open(file_name, 'rb') as f:
+        file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle.gz' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
+        with gzip.open(file_name, 'rb') as f:
             rate_nb_copula_ABO = pickle.load(f)
             list_rate_nb2_rep = rate_nb_copula_ABO['list_rate_nb2'][sess_ind].copy()
 
         # # poisson
         # list_rate_nb2_rep = np.full((len(list_target_slopes), rate.shape[0], num_trial_types*n_samples), np.nan)
         # method_poiss = 'rcomb'
-        # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle' # lam=mean for comb of neu/stim (500/50 samples)
-        # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle' # lam=var for comb of neu/stim (500/50 samples)
-        # with open(file_name, 'rb') as f:
+        # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle.gz' # lam=mean for comb of neu/stim (500/50 samples)
+        # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle.gz' # lam=var for comb of neu/stim (500/50 samples)
+        # with gzip.open(file_name, 'rb') as f:
         #     rate_poiss_copula_ABO = pickle.load(f)
         #     list_rate_nb2_rep[0] = rate_poiss_copula_ABO['list_rate_poiss2'][sess_ind].copy()
         # method = method_poiss
 
         # # katz (nb + poisson + binomial)
-        # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
-        # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
-        # with open(file_name, 'rb') as f:
+        # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
+        # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
+        # with gzip.open(file_name, 'rb') as f:
         #     rate_nb_copula_ABO = pickle.load(f)
         #     rate = rate_nb_copula_ABO['list_rate_katz_asis'][sess_ind].copy()
         #     list_rate_RRneuron_dr = rate_nb_copula_ABO['list_rate_katz_RRneuron2'][sess_ind].copy()
@@ -1169,10 +1170,10 @@ def decode_ABO(sess_ind, decoder_type, method='resc_r', n_samples=50, use_rrep=T
                 # print(f'sess_ind: {sess_ind}, rescale r {rf}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = decoder_type + '_decoding_ABO_allstim_nb_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle'
-    # filename = decoder_type + '_decoding_ABO_allstim_poiss_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle'
-    # filename = decoder_type + '_decoding_ABO_allstim_katz_indep_sep_RRneuron_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = decoder_type + '_decoding_ABO_allstim_nb_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle.gz'
+    # filename = decoder_type + '_decoding_ABO_allstim_poiss_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle.gz'
+    # filename = decoder_type + '_decoding_ABO_allstim_katz_indep_sep_RRneuron_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['mean_confusion_test_asis', 'mean_accuracy_asis', 'list_mean_confusion_test_RRneuron', 'list_mean_accuracy_RRneuron'],
                      'mean_confusion_test_asis': mean_confusion_test_asis, 'mean_accuracy_asis': mean_accuracy_asis,
                      'list_mean_confusion_test_RRneuron': list_mean_confusion_test_RRneuron, 'list_mean_accuracy_RRneuron': list_mean_accuracy_RRneuron}, f)
@@ -1198,25 +1199,25 @@ def compute_overlap_stimpairs(sess_ind, method='resc_r', n_samples=50, use_rrep=
     # NB+P
     if not use_rrep: # one r for each combination of neuron and stimulus
         method += '_rcomb'
-    file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
-    with open(file_name, 'rb') as f:
+    file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle.gz' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
+    with gzip.open(file_name, 'rb') as f:
         rate_nb_copula_ABO = pickle.load(f)
         list_rate_nb2_rep = rate_nb_copula_ABO['list_rate_nb2'][sess_ind].copy()
 
     # # poisson
     # list_rate_nb2_rep = np.full((len(list_target_slopes), rate.shape[0], num_trial_types*n_samples), np.nan)
     # method_poiss = 'rcomb'
-    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle' # lam=mean for comb of neu/stim (500/50 samples)
-    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle' # lam=var for comb of neu/stim (500/50 samples)
-    # with open(file_name, 'rb') as f:
+    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle.gz' # lam=mean for comb of neu/stim (500/50 samples)
+    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle.gz' # lam=var for comb of neu/stim (500/50 samples)
+    # with gzip.open(file_name, 'rb') as f:
     #     rate_poiss_copula_ABO = pickle.load(f)
     #     list_rate_nb2_rep[0] = rate_poiss_copula_ABO['list_rate_poiss2'][sess_ind].copy()
     # method = method_poiss
 
     # # katz (nb + poisson + binomial)
-    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
-    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
-    # with open(file_name, 'rb') as f:
+    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
+    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
+    # with gzip.open(file_name, 'rb') as f:
     #     rate_nb_copula_ABO = pickle.load(f)
     #     rate = rate_nb_copula_ABO['list_rate_katz_asis'][sess_ind].copy()
     #     list_rate_RRneuron_dr = rate_nb_copula_ABO['list_rate_katz_RRneuron2'][sess_ind].copy()
@@ -1355,10 +1356,10 @@ def compute_overlap_stimpairs(sess_ind, method='resc_r', n_samples=50, use_rrep=
             list_size_scc_RRneuron[slope_ind] = len(list(G_scc.nodes))
 
     # Save into a file
-    filename = 'overlap_nbr_stimpairs_ABO_nb_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle'
-    # filename = 'overlap_nbr_stimpairs_ABO_poiss_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle'
-    # filename = 'overlap_nbr_stimpairs_ABO_katz_indep_sep_RRneuron_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'overlap_nbr_stimpairs_ABO_nb_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle.gz'
+    # filename = 'overlap_nbr_stimpairs_ABO_poiss_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle.gz'
+    # filename = 'overlap_nbr_stimpairs_ABO_katz_indep_sep_RRneuron_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         # pickle.dump({'tree_variables': ['list_overlap_asis', 'list_overlap_RRneuron2', 'list_gap_asis', 'list_gap_RRneuron2'],
         #              'list_overlap_asis': list_overlap_asis, 'list_overlap_RRneuron2': list_overlap_RRneuron2,
         #              'list_gap_asis': list_gap_asis, 'list_gap_RRneuron2': list_gap_RRneuron2}, f)
@@ -1394,25 +1395,25 @@ def RSA_across_sesspairs_ABO(sess_ind, similarity_type, method='resc_r', n_sampl
     # NB+P
     if not use_rrep: # one r for each combination of neuron and stimulus
         method += '_rcomb'
-    file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
-    with open(file_name, 'rb') as f:
+    file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle.gz' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
+    with gzip.open(file_name, 'rb') as f:
         rate_nb_copula_ABO = pickle.load(f)
         list_rate_nb2_rep = rate_nb_copula_ABO['list_rate_nb2'][sess_ind].copy()
 
     # # poisson
     # list_rate_nb2_rep = np.full((len(list_target_slopes), rate.shape[0], num_trial_types*n_samples), np.nan)
     # method_poiss = 'rcomb'
-    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle' # lam=mean for comb of neu/stim (500/50 samples)
-    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle' # lam=var for comb of neu/stim (500/50 samples)
-    # with open(file_name, 'rb') as f:
+    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle.gz' # lam=mean for comb of neu/stim (500/50 samples)
+    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle.gz' # lam=var for comb of neu/stim (500/50 samples)
+    # with gzip.open(file_name, 'rb') as f:
     #     rate_poiss_copula_ABO = pickle.load(f)
     #     list_rate_nb2_rep[0] = rate_poiss_copula_ABO['list_rate_poiss2'][sess_ind].copy()
     # method = method_poiss
 
     # # katz (nb + poisson + binomial)
-    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
-    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
-    # with open(file_name, 'rb') as f:
+    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
+    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
+    # with gzip.open(file_name, 'rb') as f:
     #     rate_nb_copula_ABO = pickle.load(f)
     #     rate = rate_nb_copula_ABO['list_rate_katz_asis'][sess_ind].copy()
     #     list_rate_katz_RRneuron = rate_nb_copula_ABO['list_rate_katz_RRneuron2'][sess_ind].copy()
@@ -1526,10 +1527,10 @@ def RSA_across_sesspairs_ABO(sess_ind, similarity_type, method='resc_r', n_sampl
             print(f'sess_ind {sess_ind}, target_slope {target_slope:.1f}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = 'RSM_ABO_allneu_nb_sep_' + similarity_type  + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle'
-    # filename = 'RSM_ABO_allneu_poiss_sep_' + similarity_type  + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle'
-    # filename = 'RSM_ABO_allneu_katz_indep_sep_RRneuron_' + similarity_type + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_ABO_allneu_nb_sep_' + similarity_type  + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle.gz'
+    # filename = 'RSM_ABO_allneu_poiss_sep_' + similarity_type  + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle.gz'
+    # filename = 'RSM_ABO_allneu_katz_indep_sep_RRneuron_' + similarity_type + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis', 'list_rate_RRneuron_dr', 'list_RSM_mean_RRneuron'], \
                      'list_RSM_mean_asis': list_RSM_mean_asis, 'list_rate_RRneuron_dr': list_rate_RRneuron_dr, 'list_RSM_mean_RRneuron': list_RSM_mean_RRneuron}, f)
         # pickle.dump({'tree_variables': ['list_RSM_mean_asis', 'list_RSM_mean_RRneuron'], \
@@ -1564,25 +1565,25 @@ def RSA_withinsess_ABO(sess_ind, similarity_type, method='resc_r', n_samples=50,
     # NB+P
     if not use_rrep: # one r for each combination of neuron and stimulus
         method += '_rcomb'
-    file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
-    with open(file_name, 'rb') as f:
+    file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle.gz' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
+    with gzip.open(file_name, 'rb') as f:
         rate_nb_copula_ABO = pickle.load(f)
         list_rate_nb2_rep = rate_nb_copula_ABO['list_rate_nb2'][sess_ind].copy()
 
     # # poisson
     # list_rate_nb2_rep = np.full((len(list_target_slopes), rate.shape[0], num_trial_types*n_samples), np.nan)
     # method_poiss = 'rcomb'
-    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle' # lam=mean for comb of neu/stim (500/50 samples)
-    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle' # lam=var for comb of neu/stim (500/50 samples)
-    # with open(file_name, 'rb') as f:
+    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle.gz' # lam=mean for comb of neu/stim (500/50 samples)
+    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle.gz' # lam=var for comb of neu/stim (500/50 samples)
+    # with gzip.open(file_name, 'rb') as f:
     #     rate_poiss_copula_ABO = pickle.load(f)
     #     list_rate_nb2_rep[0] = rate_poiss_copula_ABO['list_rate_poiss2'][sess_ind].copy()
     # method = method_poiss
 
     # # katz (nb + poisson + binomial)
-    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
-    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
-    # with open(file_name, 'rb') as f:
+    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
+    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
+    # with gzip.open(file_name, 'rb') as f:
     #     rate_nb_copula_ABO = pickle.load(f)
     #     rate = rate_nb_copula_ABO['list_rate_katz_asis'][sess_ind].copy()
     #     list_rate_katz_RRneuron = rate_nb_copula_ABO['list_rate_katz_RRneuron2'][sess_ind].copy()
@@ -1737,10 +1738,10 @@ def RSA_withinsess_ABO(sess_ind, similarity_type, method='resc_r', n_samples=50,
                 list_corr_withinsess2[slope_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
-    filename = 'RSM_corr_withinsess_ABO_nb_sep_' + similarity_type + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle'
-    # filename = 'RSM_corr_withinsess_ABO_poiss_sep_' + similarity_type + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle'
-    # filename = 'RSM_corr_withinsess_ABO_katz_indep_sep_RRneuron_' + similarity_type + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_corr_withinsess_ABO_nb_sep_' + similarity_type + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle.gz'
+    # filename = 'RSM_corr_withinsess_ABO_poiss_sep_' + similarity_type + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle.gz'
+    # filename = 'RSM_corr_withinsess_ABO_katz_indep_sep_RRneuron_' + similarity_type + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) +  '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_neu1_all', 'list_RSM_neu2_all', 'list_RSM_neu1_RRneuron_all', 'list_RSM_neu2_RRneuron_all', 'list_corr_withinsess_asis', 'list_corr_withinsess2'], \
                     'list_RSM_neu1_all': list_RSM_neu1_all, 'list_RSM_neu2_all': list_RSM_neu2_all,
                     'list_RSM_neu1_RRneuron_all': list_RSM_neu1_RRneuron_all, 'list_RSM_neu2_RRneuron_all': list_RSM_neu2_RRneuron_all,
@@ -1779,25 +1780,25 @@ def compute_eff_dim(sess_ind, method='resc_r', n_samples=50, use_rrep=True, n_tr
     # NB+P
     if not use_rrep: # one r for each combination of neuron and stimulus
         method += '_rcomb'
-    file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
-    with open(file_name, 'rb') as f:
+    file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle.gz' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
+    with gzip.open(file_name, 'rb') as f:
         rate_nb_copula_ABO = pickle.load(f)
         list_rate_nb2_rep = rate_nb_copula_ABO['list_rate_nb2'][sess_ind].copy()
 
     # # poisson
     # list_rate_nb2_rep = np.full((len(list_target_slopes), rate.shape[0], num_trial_types*n_samples), np.nan)
     # method_poiss = 'rcomb'
-    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle' # lam=mean for comb of neu/stim (500/50 samples)
-    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle' # lam=var for comb of neu/stim (500/50 samples)
-    # with open(file_name, 'rb') as f:
+    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle.gz' # lam=mean for comb of neu/stim (500/50 samples)
+    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle.gz' # lam=var for comb of neu/stim (500/50 samples)
+    # with gzip.open(file_name, 'rb') as f:
     #     rate_poiss_copula_ABO = pickle.load(f)
     #     list_rate_nb2_rep[0] = rate_poiss_copula_ABO['list_rate_poiss2'][sess_ind].copy()
     # method = method_poiss
 
     # # katz (nb + poisson + binomial)
-    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
-    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
-    # with open(file_name, 'rb') as f:
+    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
+    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
+    # with gzip.open(file_name, 'rb') as f:
     #     rate_nb_copula_ABO = pickle.load(f)
     #     rate = rate_nb_copula_ABO['list_rate_katz_asis'][sess_ind].copy()
     #     list_rate_RRneuron_dr = rate_nb_copula_ABO['list_rate_katz_RRneuron2'][sess_ind].copy()
@@ -1875,10 +1876,10 @@ def compute_eff_dim(sess_ind, method='resc_r', n_samples=50, use_rrep=True, n_tr
                 list_dim_sam_nb[slope_ind, t_sam_ind] = ((np.trace(cf_sam)**2) / np.trace(cf_sam @ cf_sam)) / rate_nb.shape[0]
 
     # Save into a file
-    filename = 'eff_dim_DC_ABO_nb_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle'
-    # filename = 'eff_dim_DC_ABO_poiss_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle'
-    # filename = 'eff_dim_DC_ABO_katz_indep_sep_RRneuron_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'eff_dim_DC_ABO_nb_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle.gz'
+    # filename = 'eff_dim_DC_ABO_poiss_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle.gz'
+    # filename = 'eff_dim_DC_ABO_katz_indep_sep_RRneuron_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         # pickle.dump({'tree_variables': 'list_dim_nb', 'list_dim_nb': list_dim_nb}, f)
         pickle.dump({'tree_variables': ['list_dim_nb', 'list_dim_global_nb', 'list_dim_sam_nb'],
                      'list_dim_nb': list_dim_nb, 'list_dim_global_nb': list_dim_global_nb, 'list_dim_sam_nb': list_dim_sam_nb}, f)
@@ -1906,9 +1907,9 @@ def linreg_nb(sess_ind, n_samples=50):
     # rate = list_rate_all[sess_ind]
 
     # katz (nb + poisson + binomial)
-    file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
-    file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
-    with open(file_name, 'rb') as f:
+    file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
+    file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
+    with gzip.open(file_name, 'rb') as f:
         rate_nb_copula_ABO = pickle.load(f)
         rate = rate_nb_copula_ABO['list_rate_katz_asis'][sess_ind].copy()
         list_rate_RRneuron_dr = rate_nb_copula_ABO['list_rate_katz_RRneuron2'][sess_ind].copy()
@@ -1957,8 +1958,8 @@ def linreg_nb(sess_ind, n_samples=50):
         # print(f'sess_ind {sess_ind}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = 'slopes_katz_indep_sep_RRneuron_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'slopes_katz_indep_sep_RRneuron_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_slopes_all_an_loglog_nbpb_asis', 'list_slopes_all_an_loglog_nbpb'],
                      'list_slopes_all_an_loglog_nbpb_asis': list_slopes_all_an_loglog_nbpb_asis, 'list_slopes_all_an_loglog_nbpb': list_slopes_all_an_loglog_nbpb}, f)
     
@@ -1985,25 +1986,25 @@ def totvar_resampled(sess_ind, method, n_samples, use_rrep=True, model='negbinom
     # NB+P
     if not use_rrep: # one r for each combination of neuron and stimulus
         method += '_rcomb'
-    file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
-    with open(file_name, 'rb') as f:
+    file_name = 'rate_nb_copula_ABO_sep_' + method + '_' + str(n_samples) + 'samples_realR_all.pickle.gz' # r=inf when var_G=0 (500 samples), r=inf when var<mean (50 samples), r=inf when var<mean (500/50 samples, rcomb)
+    with gzip.open(file_name, 'rb') as f:
         rate_nb_copula_ABO = pickle.load(f)
         list_rate_nb2_rep = rate_nb_copula_ABO['list_rate_nb2'][sess_ind].copy()
 
     # # poisson
     # list_rate_nb2_rep = np.full((len(list_target_slopes), rate.shape[0], num_trial_types*n_samples), np.nan)
     # method_poiss = 'rcomb'
-    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle' # lam=mean for comb of neu/stim (500/50 samples)
-    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle' # lam=var for comb of neu/stim (500/50 samples)
-    # with open(file_name, 'rb') as f:
+    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all3.pickle.gz' # lam=mean for comb of neu/stim (500/50 samples)
+    # file_name = 'rate_poiss_copula_ABO_sep_' + method_poiss + '_' + str(n_samples) + 'samples_realR_all4.pickle.gz' # lam=var for comb of neu/stim (500/50 samples)
+    # with gzip.open(file_name, 'rb') as f:
     #     rate_poiss_copula_ABO = pickle.load(f)
     #     list_rate_nb2_rep[0] = rate_poiss_copula_ABO['list_rate_poiss2'][sess_ind].copy()
     # method = method_poiss
 
     # # katz (nb + poisson + binomial)
-    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
-    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
-    # with open(file_name, 'rb') as f:
+    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1 (50 samples)
+    # file_name = 'rate_katz_indep_ABO_sep_RRneuron_' + str(n_samples) + 'samples_realR_all2.pickle.gz' # slope 0-2, poiss margin 0.05, binom n>=1, use random_state (50 samples)
+    # with gzip.open(file_name, 'rb') as f:
     #     rate_nb_copula_ABO = pickle.load(f)
     #     rate = rate_nb_copula_ABO['list_rate_katz_asis'][sess_ind].copy()
     #     list_rate_katz_RRneuron = rate_nb_copula_ABO['list_rate_katz_RRneuron2'][sess_ind].copy()
@@ -2094,10 +2095,10 @@ def totvar_resampled(sess_ind, method, n_samples, use_rrep=True, model='negbinom
             list_totvar_nbp[slope_ind] = np.nansum(np.log10(rate_sorted_var_coll_nb.values), axis=0)
 
     # Save into a file
-    filename = 'totvar_nb_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle'
-    # filename = 'totvar_poiss_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle'
-    # filename = 'totvar_katz_indep_sep_RRneuron_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'totvar_nb_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle.gz'
+    # filename = 'totvar_poiss_sep_' + method + '_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle.gz'
+    # filename = 'totvar_katz_indep_sep_RRneuron_' + str(n_samples) + 'samples_realR_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         # pickle.dump({'tree_variables': ['list_totvar_RRneuron', 'list_totvar_nbp'],
         #              'list_totvar_RRneuron': list_totvar_RRneuron, 'list_totvar_nbp': list_totvar_nbp}, f)
         pickle.dump({'tree_variables': ['list_totvar_asis', 'list_totvar_RRneuron', 'list_totvar_nbp'],
@@ -2109,7 +2110,7 @@ def totvar_resampled(sess_ind, method, n_samples, use_rrep=True, model='negbinom
 # loading variables
 
 # ABO Neuropixels
-with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_RS_all_32sess_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_RS = dc(resp_matrix_ep_RS_all['list_rate_RS'])
@@ -2124,7 +2125,7 @@ with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
     sess_inds_qual_all = dc(resp_matrix_ep_RS_all['sess_inds_qual_all'])
 
 # static gratings
-with open('resp_matrix_ep_sg_all_32sess_gpu.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_sg_all_32sess_gpu.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_sg_all = resp_matrix_ep_RS_all['list_rate_sg_all'].copy()
@@ -2133,9 +2134,9 @@ with open('resp_matrix_ep_sg_all_32sess_gpu.pickle', 'rb') as f:
     list_sg_sf = resp_matrix_ep_RS_all['list_sg_sf'].copy()
     list_sg_ph = resp_matrix_ep_RS_all['list_sg_ph'].copy()
 
-save_file_name = 'poisson_fit_rp_sep_ABO_all.pickle' # GLM, bfgs, r=inf when var_G=0
-save_file_name = 'poisson_fit_rp_sep_ABO_all2.pickle' # GLM, bfgs, r=inf when var<mean
-with open(save_file_name, 'rb') as f:
+save_file_name = 'poisson_fit_rp_sep_ABO_all.pickle.gz' # GLM, bfgs, r=inf when var_G=0
+save_file_name = 'poisson_fit_rp_sep_ABO_all2.pickle.gz' # GLM, bfgs, r=inf when var<mean
+with gzip.open(save_file_name, 'rb') as f:
     poisson_fit_rp_ABO_all = pickle.load(f)
     list_r_estim_neu2 = dc(poisson_fit_rp_ABO_all['list_r_estim_neu2']) # katz (nb)
     list_p_estim_neu2 = dc(poisson_fit_rp_ABO_all['list_p_estim_neu2']) # katz (nb, bin)

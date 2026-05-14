@@ -5,6 +5,7 @@ import hdf5storage as st
 # from pymatreader import read_mat
 import pickle
 import os
+import gzip
 
 import multiprocessing as mp
 
@@ -227,8 +228,8 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, adjacency_typ
         list_tot_var2_ABO_one_tt[sess_ind] = list_tot_var_one_tt.copy()
 
     # Save into a file
-    filename = 'meansim_orthopar_ABO_allneu_' + adjacency_type + str(slope_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'meansim_orthopar_ABO_allneu_' + adjacency_type + str(slope_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_mean_sim2_ABO_one_tt', 'list_orthopar2_ABO_one_tt', 'list_tot_var2_ABO_one_tt'],
                         'list_mean_sim2_ABO_one_tt': list_mean_sim2_ABO_one_tt, 'list_orthopar2_ABO_one_tt': list_orthopar2_ABO_one_tt, 'list_tot_var2_ABO_one_tt': list_tot_var2_ABO_one_tt}, f)
 
@@ -238,7 +239,7 @@ def compute_meansim_orthopar_ABO_RRneuron(slope_ind, target_slope, adjacency_typ
 # loading variables
 
 # ABO
-with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_RS_all_32sess_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_all = resp_matrix_ep_RS_all['list_rate_all'].copy()

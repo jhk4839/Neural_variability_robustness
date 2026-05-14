@@ -8,6 +8,7 @@ import hdf5storage as st
 import pickle
 import os
 import warnings
+import gzip
 
 import multiprocessing as mp
 import traceback
@@ -310,9 +311,9 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
         list_corr_sesspair[pair_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
-    filename = 'RSM_corr_sesspair_ABO_allneu_' + similarity_type + str(slope_ind) + '.pickle'
-    filename = 'RSM_corr_sesspair_ABO_allneu_onscreen_' + similarity_type + str(slope_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_corr_sesspair_ABO_allneu_' + similarity_type + str(slope_ind) + '.pickle.gz'
+    filename = 'RSM_corr_sesspair_ABO_allneu_onscreen_' + similarity_type + str(slope_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis', 'list_corr_sesspair_asis', 'list_rate_RRneuron_dr', 'list_RSM_mean_RRneuron', 'list_corr_sesspair'], \
                      'list_RSM_mean_asis': list_RSM_mean_asis, 'list_corr_sesspair_asis': list_corr_sesspair_asis,
                      'list_rate_RRneuron_dr': list_rate_RRneuron_dr, 'list_RSM_mean_RRneuron': list_RSM_mean_RRneuron, 'list_corr_sesspair': list_corr_sesspair}, f)
@@ -515,8 +516,8 @@ def RSA_across_sesspairs_ABO_HVA(slope_ind, target_slope, similarity_type='cos_s
         list_corr_sesspair_HVA[area] = list_corr_sesspair.copy()
     
     # Save into a file
-    filename = 'RSM_corr_sesspair_ABO_HVA_allneu_' + similarity_type + str(slope_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_corr_sesspair_ABO_HVA_allneu_' + similarity_type + str(slope_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis_HVA', 'list_corr_sesspair_asis_HVA', 'list_rate_RRneuron_dr_HVA', 'list_RSM_mean_RRneuron_HVA', 'list_corr_sesspair_HVA'],
                      'list_RSM_mean_asis_HVA': list_RSM_mean_asis_HVA, 'list_corr_sesspair_asis_HVA': list_corr_sesspair_asis_HVA,
                      'list_rate_RRneuron_dr_HVA': list_rate_RRneuron_dr_HVA, 'list_RSM_mean_RRneuron_HVA': list_RSM_mean_RRneuron_HVA, 'list_corr_sesspair_HVA': list_corr_sesspair_HVA}, f)
@@ -711,9 +712,9 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type='cos_sim'):
                 list_corr_withinsess2[sess_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
-    filename = 'RSM_corr_withinsess_ABO_' + similarity_type + str(slope_ind) + '.pickle'
-    filename = 'RSM_corr_withinsess_ABO_onscreen_' + similarity_type + str(slope_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_corr_withinsess_ABO_' + similarity_type + str(slope_ind) + '.pickle.gz'
+    filename = 'RSM_corr_withinsess_ABO_onscreen_' + similarity_type + str(slope_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis2', 'list_corr_withinsess2'], \
                     'list_corr_withinsess_asis2': list_corr_withinsess_asis2, 'list_corr_withinsess2': list_corr_withinsess2}, f)
         
@@ -915,8 +916,8 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type='cos_sim'):
         list_corr_withinsess_HVA[area] = list_corr_withinsess2.copy()
 
     # Save into a file
-    filename = 'RSM_corr_withinsess_ABO_HVA_' + similarity_type + str(slope_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_corr_withinsess_ABO_HVA_' + similarity_type + str(slope_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis_HVA', 'list_corr_withinsess_HVA'], \
                     'list_corr_withinsess_asis_HVA': list_corr_withinsess_asis_HVA, 'list_corr_withinsess_HVA': list_corr_withinsess_HVA}, f)
         
@@ -1189,11 +1190,11 @@ def decode_ABO(sess_ind, decoder_type):
             print(f'sess_ind: {sess_ind}, target slope {target_slope:.1f}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = decoder_type + '_decoding_ABO_allstim_' + str(sess_ind) + '.pickle'
-    filename = decoder_type + '_decoding_ABO_allstim_shuf_' + str(sess_ind) + '.pickle'
-    filename = decoder_type + '_decoding_ABO_allstim_onscreen_' + str(sess_ind) + '.pickle'
-    # filename = decoder_type + '_decoding_ABO_allstim_train0_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = decoder_type + '_decoding_ABO_allstim_' + str(sess_ind) + '.pickle.gz'
+    filename = decoder_type + '_decoding_ABO_allstim_shuf_' + str(sess_ind) + '.pickle.gz'
+    filename = decoder_type + '_decoding_ABO_allstim_onscreen_' + str(sess_ind) + '.pickle.gz'
+    # filename = decoder_type + '_decoding_ABO_allstim_train0_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['mean_confusion_test_asis', 'mean_accuracy_asis', 'list_mean_confusion_test_RRneuron', 'list_mean_accuracy_RRneuron'],
                      'mean_confusion_test_asis': mean_confusion_test_asis, 'mean_accuracy_asis': mean_accuracy_asis,
                      'list_mean_confusion_test_RRneuron': list_mean_confusion_test_RRneuron, 'list_mean_accuracy_RRneuron': list_mean_accuracy_RRneuron}, f)
@@ -1421,8 +1422,8 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type='SVM'):
         list_mean_accuracy_RRneuron_HVA[area] = list_mean_accuracy_RRneuron.copy()
 
     # Save into a file
-    filename = decoder_type + '_decoding_ABO_HVA_' + str(slope_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = decoder_type + '_decoding_ABO_HVA_' + str(slope_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_mean_confusion_test_HVA', 'list_mean_accuracy_HVA', 'list_mean_confusion_test_RRneuron_HVA', 'list_mean_accuracy_RRneuron_HVA'],
                      'list_mean_confusion_test_HVA': list_mean_confusion_test_HVA, 'list_mean_accuracy_HVA': list_mean_accuracy_HVA,
                      'list_mean_confusion_test_RRneuron_HVA': list_mean_confusion_test_RRneuron_HVA, 'list_mean_accuracy_RRneuron_HVA': list_mean_accuracy_RRneuron_HVA}, f)
@@ -1433,7 +1434,7 @@ def decode_ABO_HVA(slope_ind, target_slope, decoder_type='SVM'):
 # loading variables
 
 # ABO Neuropixels
-with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_RS_all_32sess_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_RS = resp_matrix_ep_RS_all['list_rate_RS'].copy()
@@ -1444,21 +1445,21 @@ with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
     list_slopes_all_an_loglog = resp_matrix_ep_RS_all['list_slopes_all_an_loglog'].copy()
 
 # ABO higher visual areas
-with open('resp_matrix_ep_HVA_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_HVA_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_HVA_allensdk = pickle.load(f)
 
     list_rate_all_HVA = dc(resp_matrix_ep_HVA_allensdk['list_rate_all_HVA'])
     list_slopes_all_an_loglog_HVA = dc(resp_matrix_ep_HVA_allensdk['list_slopes_all_an_loglog_HVA'])
     list_empty_sess2 = dc(resp_matrix_ep_HVA_allensdk['list_empty_sess2'])
 
-with open('resp_matrix_ep_naturalmovie_FC_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_naturalmovie_FC_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_naturalmovie = pickle.load(f)
     brain_observatory_sessid = resp_matrix_ep_naturalmovie['brain_observatory_sessid'].copy()
     list_sess_ids = resp_matrix_ep_naturalmovie['list_sess_ids'].copy()
 
 # receptive field metrics for each V1 unit
-save_file_name = 'unit_rf_metrics_all.pickle'
-with open(save_file_name, 'rb') as f:
+save_file_name = 'unit_rf_metrics_all.pickle.gz'
+with gzip.open(save_file_name, 'rb') as f:
     unit_rf_metrics_all = pickle.load(f)
     list_rfmet2 = unit_rf_metrics_all['list_rfmet2'].copy()
     list_slopes_all_an_loglog_onscreen = unit_rf_metrics_all['list_slopes_all_an_loglog_onscreen'].copy()

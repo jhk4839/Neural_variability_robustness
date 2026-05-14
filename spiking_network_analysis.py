@@ -2,6 +2,7 @@
 import pickle
 from copy import deepcopy as dc
 import multiprocessing as mp
+import gzip
 
 import numpy as np
 import pandas as pd
@@ -116,9 +117,9 @@ def compute_spkcnt_slope_comb(net_params=None, stim_params=None, sim_params=None
         for key, value in misc_params.items():
             save_name_sum += '_' + key + str(value)
 
-    save_file_name = 'ei_clust_result' + save_name_sum + '.pickle'
+    save_file_name = 'ei_clust_result' + save_name_sum + '.pickle.gz'
     save_file_name = save_path + save_file_name
-    with open(save_file_name, 'rb') as f:
+    with gzip.open(save_file_name, 'rb') as f:
         ei_clust_result = pickle.load(f)
     params_sim = dc(ei_clust_result['_params'])
     
@@ -191,9 +192,9 @@ def compute_spkcnt_slope_comb2(net_params=None, stim_params=None, sim_params=Non
         for key, value in misc_params.items():
             save_name_sum += '_' + key + str(value)
 
-    save_file_name = 'ei_clust_result' + save_name_sum + '.pickle'
+    save_file_name = 'ei_clust_result' + save_name_sum + '.pickle.gz'
     save_file_name = save_path + save_file_name
-    with open(save_file_name, 'rb') as f:
+    with gzip.open(save_file_name, 'rb') as f:
         ei_clust_result = pickle.load(f)
     params_sim = dc(ei_clust_result['_params'])
     try:
@@ -278,8 +279,8 @@ def linreg_SNN(sess_ind, seed):
     N_E = 1200; N_I = 300
     N = N_E + N_I
 
-    save_file_name = 'RSA_across_within_sess_all27.pickle' # m4, stim_amp 0.1, 10 sessions (seed 1-901), trial/neuron division matching, V_m/conn control
-    with open(save_file_name, 'rb') as f:
+    save_file_name = 'RSA_across_within_sess_all27.pickle.gz' # m4, stim_amp 0.1, 10 sessions (seed 1-901), trial/neuron division matching, V_m/conn control
+    with gzip.open(save_file_name, 'rb') as f:
         RSA_across_within_sess_all = pickle.load(f)
         list_spkcnt_Qstcl = RSA_across_within_sess_all['list_spkcnt_Qstcl'].copy()
 
@@ -300,8 +301,8 @@ def linreg_SNN(sess_ind, seed):
 
     # Q=1
     similarity_type = 'cos_sim'
-    save_file_name = 'RSA_across_within_sess_' + similarity_type + '_all4.pickle' # stim_amp 0.1, 10 sessions (seed 1-901), trial/neuron division matching, V_m/conn control, stim_neu, within sess RSM, Q=1
-    with open(save_file_name, 'rb') as f:
+    save_file_name = 'RSA_across_within_sess_' + similarity_type + '_all4.pickle.gz' # stim_amp 0.1, 10 sessions (seed 1-901), trial/neuron division matching, V_m/conn control, stim_neu, within sess RSM, Q=1
+    with gzip.open(save_file_name, 'rb') as f:
         RSA_across_within_sess_all = pickle.load(f)
         list_spkcnt_Qstcl_Q1 = RSA_across_within_sess_all['list_spkcnt_Qstcl'].copy()
 
@@ -321,8 +322,8 @@ def linreg_SNN(sess_ind, seed):
         list_slopes_acrtt_Q1[ind], list_slopes_acrneu_Q1[ind] = list_slopes.copy()
 
     # Save into a file
-    filename = 'slopes_SNN_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'slopes_SNN_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         # pickle.dump({'tree_variables': ['list_slopes_Qstcl', 'list_slopes_Qstcl_Q1', 'list_params_sim', 'list_params_sim_Q1'],
         #              'list_slopes_Qstcl': list_slopes_Qstcl, 'list_slopes_Qstcl_Q1': list_slopes_Qstcl_Q1,
         #              'list_params_sim': list_params_sim, 'list_params_sim_Q1': list_params_sim_Q1}, f)
@@ -435,8 +436,8 @@ def decode_SNN(sess_ind, seed, decoder_type):
         list_mean_accuracy[ind] = mean_accuracy
 
     # Save into a file
-    filename = decoder_type + '_decoding_SNN_allstim_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = decoder_type + '_decoding_SNN_allstim_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_spkcnt_Qstcl', 'list_slopes_Qstcl', 'list_params_sim', 'list_mean_confusion_test', 'list_mean_accuracy'],
                      'list_spkcnt_Qstcl': list_spkcnt_Qstcl, 'list_slopes_Qstcl': list_slopes_Qstcl, 'list_params_sim': list_params_sim,
                      'list_mean_confusion_test': list_mean_confusion_test, 'list_mean_accuracy': list_mean_accuracy}, f)
@@ -589,8 +590,8 @@ def RSA_across_within_sess(sess_ind, seed, similarity_type='cos_sim'):
         print(f'sess_ind={sess_ind}, Q={Q}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = 'RSA_across_within_sess_' + similarity_type + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSA_across_within_sess_' + similarity_type + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_spkcnt_Qstcl', 'list_slopes_Qstcl', 'list_params_sim', 'list_RSM_mean', 'list_RSM_neu1_all', 'list_RSM_neu2_all', 'list_corr_withinsess'],
                      'list_spkcnt_Qstcl': list_spkcnt_Qstcl, 'list_slopes_Qstcl': list_slopes_Qstcl, 'list_params_sim': list_params_sim,
                      'list_RSM_mean': list_RSM_mean, 'list_RSM_neu1_all': list_RSM_neu1_all, 'list_RSM_neu2_all': list_RSM_neu2_all, 'list_corr_withinsess': list_corr_withinsess}, f)
@@ -674,8 +675,8 @@ def compute_eff_dim(sess_ind, seed, n_trial_sampling=100):
             list_dim_sam[ind, t_sam_ind] = ((np.trace(cf_sam)**2) / np.sum(cf_sam * cf_sam)) / rate_sorted.shape[0]
 
     # Save into a file
-    filename = 'eff_dim_DC_SNN_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'eff_dim_DC_SNN_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_spkcnt_Qstcl', 'list_slopes_Qstcl', 'list_params_sim', 'list_dim', 'list_dim_global', 'list_dim_sam'],
                     'list_spkcnt_Qstcl': list_spkcnt_Qstcl, 'list_slopes_Qstcl': list_slopes_Qstcl, 'list_params_sim': list_params_sim,
                     'list_dim': list_dim, 'list_dim_global': list_dim_global, 'list_dim_sam': list_dim_sam}, f)

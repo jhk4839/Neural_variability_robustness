@@ -10,7 +10,7 @@ This repository contains the source code for the manuscript "Neural variability 
 - The Jupyter Notebooks and Python scripts have been verified to run using Visual Studio Code (Windows 11) in a Python 3.11.10 virtual environment after installing the packages listed in `requirements.txt` using pip 24.2. (Save `requirements.txt` in the same directory as the Jupyter Notebooks.)
 - The MATLAB scripts have been verified to run in MATLAB R2024b.
 
-**To generate the figures, you only need the Jupyter Notebooks, and pickle files which can be downloaded from https://figshare.com/s/64957e60fe943cb732a7. Those pickle files contain all the variables needed to run the Jupyter Notebooks, so save them in the same directory as the Jupyter Notebooks and run each Jupyter Notebook from the first cell.**
+**To generate the figures, you only need the Jupyter Notebooks, and pickle files which can be downloaded from https://figshare.com/s/64957e60fe943cb732a7. Those pickle files contain all the variables needed to run the Jupyter Notebooks, so save them in the same directory as the Jupyter Notebooks and run each Jupyter Notebook.**
 
 First, install the packages listed in `requirements.txt` in your Python 3.11.10 virtual environment.
 ```bash

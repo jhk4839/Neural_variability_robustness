@@ -4,6 +4,7 @@ from scipy.io import savemat, loadmat
 import mat73
 import hdf5storage as st
 import pickle
+import gzip
 
 import multiprocessing as mp
 
@@ -219,10 +220,10 @@ def compute_eff_dim(sess_ind, n_trial_sampling=100):
         #     list_dim_RRneuron[slope_ind, trial_type_ind] = (np.sum(pca.explained_variance_))**2 / np.sum(pca.explained_variance_**2)
 
     # Save into a file
-    filename = 'eff_dim_DC_ABO_' + str(sess_ind) + '.pickle'
-    filename = 'eff_dim_DC_ABO_onscreen_' + str(sess_ind) + '.pickle'
-    # filename = 'eff_dim_DC_ABO_shuf_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'eff_dim_DC_ABO_' + str(sess_ind) + '.pickle.gz'
+    filename = 'eff_dim_DC_ABO_onscreen_' + str(sess_ind) + '.pickle.gz'
+    # filename = 'eff_dim_DC_ABO_shuf_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_dim_asis', 'list_dim_RRneuron', 'list_dim_global_asis', 'list_dim_global_RRneuron', 'list_dim_sam_asis', 'list_dim_sam_RRneuron'],
                     'list_dim_asis': list_dim_asis, 'list_dim_RRneuron': list_dim_RRneuron, 'list_dim_global_asis': list_dim_global_asis, 'list_dim_global_RRneuron': list_dim_global_RRneuron,
                     'list_dim_sam_asis': list_dim_sam_asis, 'list_dim_sam_RRneuron': list_dim_sam_RRneuron}, f)
@@ -360,8 +361,8 @@ def compute_eff_dim_HVA(sess_ind, n_trial_sampling=10):
                 print(f'sess_ind {sess_ind}, area {area}, target_slope {target_slope:.1f}, duration {(time.time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = 'eff_dim_DC_ABO_HVA_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'eff_dim_DC_ABO_HVA_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_dim_asis_HVA', 'list_dim_RRneuron_HVA', 'list_dim_global_asis_HVA',
                                         'list_dim_global_RRneuron_HVA', 'list_dim_sam_asis_HVA', 'list_dim_sam_RRneuron_HVA'],
                     'list_dim_asis_HVA': list_dim_asis_HVA, 'list_dim_RRneuron_HVA': list_dim_RRneuron_HVA, 'list_dim_global_asis_HVA': list_dim_global_asis_HVA,
@@ -373,7 +374,7 @@ def compute_eff_dim_HVA(sess_ind, n_trial_sampling=10):
 # loading variables
 
 # ABO Neuropixels
-with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_RS_all_32sess_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_RS = resp_matrix_ep_RS_all['list_rate_RS'].copy()
@@ -386,21 +387,21 @@ with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
     sess_inds_qual_all = resp_matrix_ep_RS_all['sess_inds_qual_all'].copy()
 
 # ABO higher visual areas
-with open('resp_matrix_ep_HVA_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_HVA_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_HVA_allensdk = pickle.load(f)
 
     list_rate_all_HVA = dc(resp_matrix_ep_HVA_allensdk['list_rate_all_HVA'])
     list_slopes_all_an_loglog_HVA = dc(resp_matrix_ep_HVA_allensdk['list_slopes_all_an_loglog_HVA'])
     list_empty_sess2 = dc(resp_matrix_ep_HVA_allensdk['list_empty_sess2'])
 
-with open('resp_matrix_ep_naturalmovie_FC_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_naturalmovie_FC_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_naturalmovie = pickle.load(f)
     brain_observatory_sessid = resp_matrix_ep_naturalmovie['brain_observatory_sessid'].copy()
     list_sess_ids = resp_matrix_ep_naturalmovie['list_sess_ids'].copy()
 
 # receptive field metrics for each V1 unit
-save_file_name = 'unit_rf_metrics_all.pickle'
-with open(save_file_name, 'rb') as f:
+save_file_name = 'unit_rf_metrics_all.pickle.gz'
+with gzip.open(save_file_name, 'rb') as f:
     unit_rf_metrics_all = pickle.load(f)
     list_rfmet2 = unit_rf_metrics_all['list_rfmet2'].copy()
     list_slopes_all_an_loglog_onscreen = unit_rf_metrics_all['list_slopes_all_an_loglog_onscreen'].copy()

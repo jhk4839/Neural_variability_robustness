@@ -32,5 +32,6 @@ data/
 
 # large pickle files
 *.pickle
+*.pickle.gz
 
 # End of https://www.toptal.com/developers/gitignore/api/windows

@@ -9,6 +9,7 @@ import pickle
 import os
 import warnings
 import multiprocessing as mp
+import gzip
 
 import numpy as np
 import pandas as pd
@@ -307,9 +308,9 @@ def decode_gratings(sess_ind, decoder_type):
             # print(f'sess_ind: {sess_ind}, rescale r {rf}, duration {(time()-start_time)/60:.2f} min')
 
     # Save into a file
-    filename = decoder_type + '_decoding_sg_allstim_' + str(sess_ind) + '.pickle'
-    filename = decoder_type + '_decoding_dg75_250_allstim_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = decoder_type + '_decoding_sg_allstim_' + str(sess_ind) + '.pickle.gz'
+    filename = decoder_type + '_decoding_dg75_250_allstim_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['mean_confusion_test_asis', 'mean_accuracy_asis', 'list_mean_confusion_test_RRneuron', 'list_mean_accuracy_RRneuron'],
                      'mean_confusion_test_asis': mean_confusion_test_asis, 'mean_accuracy_asis': mean_accuracy_asis,
                      'list_mean_confusion_test_RRneuron': list_mean_confusion_test_RRneuron, 'list_mean_accuracy_RRneuron': list_mean_accuracy_RRneuron}, f)
@@ -527,8 +528,8 @@ def decode_diffwin(sess_ind, decoder_type):
                 list_mean_accuracy_RRneuron2[win_ind] = list_mean_accuracy_RRneuron.copy()
             
     # Save into a file
-    filename = decoder_type + '_decoding_diffwin_trunc_allstim_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = decoder_type + '_decoding_diffwin_trunc_allstim_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_mean_confusion_test_asis', 'list_mean_accuracy_asis', 'list_mean_confusion_test_RRneuron2', 'list_mean_accuracy_RRneuron2'],
                      'list_mean_confusion_test_asis': list_mean_confusion_test_asis, 'list_mean_accuracy_asis': list_mean_accuracy_asis,
                      'list_mean_confusion_test_RRneuron2': list_mean_confusion_test_RRneuron2, 'list_mean_accuracy_RRneuron2': list_mean_accuracy_RRneuron2}, f)
@@ -677,9 +678,9 @@ def RSA_across_sesspairs_gratings(sess_ind, similarity_type):
         list_RSM_mean_RRneuron[slope_ind] = RSM_mean.copy()
 
     # Save into a file
-    filename = 'RSM_sg_allneu_' + similarity_type + str(sess_ind) + '.pickle'
-    filename = 'RSM_dg75_250_allneu_' + similarity_type + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_sg_allneu_' + similarity_type + str(sess_ind) + '.pickle.gz'
+    filename = 'RSM_dg75_250_allneu_' + similarity_type + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis', 'list_rate_RRneuron_dr', 'list_RSM_mean_RRneuron'], \
                      'list_RSM_mean_asis': list_RSM_mean_asis, 'list_rate_RRneuron_dr': list_rate_RRneuron_dr, 'list_RSM_mean_RRneuron': list_RSM_mean_RRneuron}, f)
 
@@ -840,8 +841,8 @@ def RSA_across_sesspairs_diffwin(sess_ind, similarity_type):
             list_RSM_mean_RRneuron2[win_ind] = list_RSM_mean_RRneuron.copy()
 
     # Save into a file
-    filename = 'RSM_diffwin_trunc_allneu_' + similarity_type + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'RSM_diffwin_trunc_allneu_' + similarity_type + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis2', 'list_rate_RRneuron_dr2', 'list_RSM_mean_RRneuron2'], \
                      'list_RSM_mean_asis2': list_RSM_mean_asis2, 'list_rate_RRneuron_dr2': list_rate_RRneuron_dr2, 'list_RSM_mean_RRneuron2': list_RSM_mean_RRneuron2}, f)
 
@@ -1039,9 +1040,9 @@ def RSA_withinsess_gratings(sess_ind, similarity_type):
             list_corr_withinsess2[slope_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
-    filename = 'RSM_corr_withinsess_sg_' + similarity_type + str(sess_ind) + '.pickle'
-    filename = 'RSM_corr_withinsess_dg75_250_' + similarity_type + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:      
+    filename = 'RSM_corr_withinsess_sg_' + similarity_type + str(sess_ind) + '.pickle.gz'
+    filename = 'RSM_corr_withinsess_dg75_250_' + similarity_type + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:      
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis', 'list_corr_withinsess2', 'list_RSM_neu1_all', 'list_RSM_neu2_all', 'list_RSM_neu1_RRneuron_all', 'list_RSM_neu2_RRneuron_all'], \
                     'list_corr_withinsess_asis': list_corr_withinsess_asis, 'list_corr_withinsess2': list_corr_withinsess2, 'list_RSM_neu1_all': list_RSM_neu1_all, 'list_RSM_neu2_all': list_RSM_neu2_all,
                     'list_RSM_neu1_RRneuron_all': list_RSM_neu1_RRneuron_all, 'list_RSM_neu2_RRneuron_all': list_RSM_neu2_RRneuron_all}, f)
@@ -1249,8 +1250,8 @@ def RSA_withinsess_diffwin(sess_ind, similarity_type):
                     list_corr_withinsess3[win_ind, slope_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
-    filename = 'RSM_corr_withinsess_diffwin_trunc_' + similarity_type + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:      
+    filename = 'RSM_corr_withinsess_diffwin_trunc_' + similarity_type + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:      
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis2', 'list_corr_withinsess3', 'list_RSM_neu1_all2', 'list_RSM_neu2_all2', 'list_RSM_neu1_RRneuron_all2', 'list_RSM_neu2_RRneuron_all2'], \
                     'list_corr_withinsess_asis2': list_corr_withinsess_asis2, 'list_corr_withinsess3': list_corr_withinsess3, 'list_RSM_neu1_all2': list_RSM_neu1_all2, 'list_RSM_neu2_all2': list_RSM_neu2_all2,
                     'list_RSM_neu1_RRneuron_all2': list_RSM_neu1_RRneuron_all2, 'list_RSM_neu2_RRneuron_all2': list_RSM_neu2_RRneuron_all2}, f)
@@ -1387,9 +1388,9 @@ def compute_eff_dim(sess_ind, n_trial_sampling=10):
         #     list_dim_RRneuron[slope_ind, trial_type_ind] = (np.sum(pca.explained_variance_))**2 / np.sum(pca.explained_variance_**2)
 
     # Save into a file
-    filename = 'eff_dim_DC_sg_' + str(sess_ind) + '.pickle'
-    filename = 'eff_dim_DC_dg75_250_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'eff_dim_DC_sg_' + str(sess_ind) + '.pickle.gz'
+    filename = 'eff_dim_DC_dg75_250_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_dim_asis', 'list_dim_RRneuron', 'list_dim_global_asis', 'list_dim_global_RRneuron', 'list_dim_sam_asis', 'list_dim_sam_RRneuron'],
                     'list_dim_asis': list_dim_asis, 'list_dim_RRneuron': list_dim_RRneuron, 'list_dim_global_asis': list_dim_global_asis, 'list_dim_global_RRneuron': list_dim_global_RRneuron,
                     'list_dim_sam_asis': list_dim_sam_asis, 'list_dim_sam_RRneuron': list_dim_sam_RRneuron}, f)
@@ -1525,8 +1526,8 @@ def compute_eff_dim_diffwin(sess_ind, n_trial_sampling=100):
                 #     list_dim_RRneuron[slope_ind, trial_type_ind] = (np.sum(pca.explained_variance_))**2 / np.sum(pca.explained_variance_**2)
 
     # Save into a file
-    filename = 'eff_dim_DC_diffwin_trunc_' + str(sess_ind) + '.pickle'
-    with open(filename, "wb") as f:
+    filename = 'eff_dim_DC_diffwin_trunc_' + str(sess_ind) + '.pickle.gz'
+    with gzip.open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_dim_asis2', 'list_dim_RRneuron2', 'list_dim_global_asis2', 'list_dim_global_RRneuron2', 'list_dim_sam_asis2', 'list_dim_sam_RRneuron2'],
                     'list_dim_asis2': list_dim_asis2, 'list_dim_RRneuron2': list_dim_RRneuron2, 'list_dim_global_asis2': list_dim_global_asis2, 'list_dim_global_RRneuron2': list_dim_global_RRneuron2,
                     'list_dim_sam_asis2': list_dim_sam_asis2, 'list_dim_sam_RRneuron2': list_dim_sam_RRneuron2}, f)
@@ -1535,7 +1536,7 @@ def compute_eff_dim_diffwin(sess_ind, n_trial_sampling=100):
 
 # %%
 # loading variables
-with open('resp_matrix_ep_sg_all_32sess_gpu.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_sg_all_32sess_gpu.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_sg_all = resp_matrix_ep_RS_all['list_rate_sg_all'].copy()
@@ -1544,7 +1545,7 @@ with open('resp_matrix_ep_sg_all_32sess_gpu.pickle', 'rb') as f:
     list_sg_sf = resp_matrix_ep_RS_all['list_sg_sf'].copy()
     list_sg_ph = resp_matrix_ep_RS_all['list_sg_ph'].copy()
     
-with open('resp_matrix_ep_dg75_all_32sess_gpu.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_dg75_all_32sess_gpu.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_dg75_all = resp_matrix_ep_RS_all['list_rate_dg75_all'].copy()
@@ -1556,14 +1557,14 @@ with open('resp_matrix_ep_dg75_all_32sess_gpu.pickle', 'rb') as f:
     list_sess_ids = resp_matrix_ep_RS_all['list_sess_ids'].copy()
     brain_observatory_sessid = resp_matrix_ep_RS_all['brain_observatory_sessid'].copy()
 
-with open('resp_matrix_ep_diffwin_all_32sess_gpu.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_diffwin_all_32sess_gpu.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_diffwin_trunc_all = resp_matrix_ep_RS_all['list_rate_diffwin_trunc_all'].copy()
     list_slopes_diffwin_trunc_all_an_loglog = resp_matrix_ep_RS_all['list_slopes_diffwin_trunc_all_an_loglog'].copy()
 
 # ABO Neuropixels
-with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
+with gzip.open('resp_matrix_ep_RS_all_32sess_allensdk.pickle.gz', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)
 
     list_rate_RS = resp_matrix_ep_RS_all['list_rate_RS'].copy()

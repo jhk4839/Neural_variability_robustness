@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from itertools import combinations, product
 import math
+import gzip
 
 def simulate_and_save(net_params=None, stim_dict_temp=None, stim_params=None, sim_params=None, misc_params=None):
 
@@ -83,8 +84,8 @@ def simulate_and_save(net_params=None, stim_dict_temp=None, stim_params=None, si
     print(f'Simulation required {(time()-start_time)/60:.2f} min')
 
     save_file_name = 'ei_clust_result'
-    save_file_name = save_file_name + save_name_sum + '.pickle'
-    with open(save_file_name, 'wb') as f:
+    save_file_name = save_file_name + save_name_sum + '.pickle.gz'
+    with gzip.open(save_file_name, 'wb') as f:
         pickle.dump(result, f)
 
 def create_stim_dict(n_clusters=6, n_stim_clusters=None, n_stim_neurons=None, n_stims=6, n_trials=50, dur_stim=250, stim_amp=0.15, randseed=0,
