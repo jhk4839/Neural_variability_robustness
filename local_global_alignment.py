@@ -285,16 +285,6 @@ def compute_cos_sim_pc1_adj_ABO(slope_ind, target_slope, adjacency_type='geodesi
 # %%
 # loading variables
 
-# openscope
-with open('SVM_prerequisite_variables.pickle', 'rb') as f:
-    SVM_prerequisite_variables = pickle.load(f)
-    
-    list_rate_w1 = SVM_prerequisite_variables['list_rate_w1'].copy()
-    list_stm_w1 = SVM_prerequisite_variables['list_stm_w1'].copy()
-    list_neu_loc = SVM_prerequisite_variables['list_neu_loc'].copy()
-    list_wfdur = SVM_prerequisite_variables['list_wfdur'].copy()
-    list_slopes_an_loglog_12 = SVM_prerequisite_variables['list_slopes_an_loglog_12'].copy() # high repeat trial type
-
 # ABO Neuropixels
 with open('resp_matrix_ep_RS_all_32sess_allensdk.pickle', 'rb') as f:
     resp_matrix_ep_RS_all = pickle.load(f)

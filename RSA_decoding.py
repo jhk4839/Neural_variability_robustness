@@ -118,8 +118,10 @@ def normc(matrix):
 # %%
 # RSA across session pairs (ABO Neuropixels, RRneuron)
 
-def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type='cos_sim'):
+def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type):
     
+    ''' similarity_type is 'cos_sim', 'geodesic', or 'isomap' '''
+
     c_proc = mp.current_process()
     print("Running on Process", c_proc.name, "PID", c_proc.pid)
 
@@ -140,48 +142,118 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type='cos_sim')
 
     # list_sess_inds = np.delete(np.arange(num_sess).astype(int), [0, 6])
     for ind in range(num_sess):
+        # if ind != 7: # all spike count is zero in receptive field mapping block
+            # start_time = time()
+            print(f'ind: {ind}')
 
-        print(f'ind: {ind}')
+            rate = list_rate_all[ind].copy()
+            # rate_sorted = rate.sort_index(axis=1)
+            stm = rate.columns.copy()
+            num_neurons = rate.shape[0]
 
-        rate = list_rate_all[ind].copy()
-        # rate_sorted = rate.sort_index(axis=1)
-        stm = rate.columns.copy()
+            bool_onscreen = list_rfmet2[ind][:, -1].astype(bool) # deepcopy
+            rate = rate.loc[bool_onscreen]
 
-        # Multiply by delta t to convert to spike counts
-        rate = rate * 0.25
+            # Multiply by delta t to convert to spike counts
+            rate = rate * 0.25
 
-        # Create a counting dictionary for each stimulus
-        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
-        stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
+            # Create a counting dictionary for each stimulus
+            all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True)
+            stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
+            
+            # convert to 3D response matrix
+            min_num_trials = np.min(all_stm_counts) # session 4 has heterogeneous numbers of trials (minimum 47)
+
+            list_rate_tt = [None] * num_trial_types
+            for trial_type_ind, trial_type in enumerate(np.arange(-1, 118, 1).astype(int)):
+                list_rate_tt[trial_type_ind] = rate.loc[:, trial_type].iloc[:, :min_num_trials].copy()
+
+            rate = np.stack(list_rate_tt, axis=2)
+            rate_sorted = np.transpose(rate, (0, 2, 1)) # num_neurons x num_trial_types x num_trials
         
-        # convert to 3D response matrix
-        min_num_trials = np.min(all_stm_counts) # session 4 has heterogeneous numbers of trials (minimum 47)
+            rate_sorted_mean_coll, rate_sorted_var_coll = np.mean(rate_sorted, axis=2), np.var(rate_sorted, axis=2, ddof=1)
+            rate_sorted_mean, rate_sorted_var = np.repeat(rate_sorted_mean_coll[:, :, np.newaxis], min_num_trials, axis=2), \
+                np.repeat(rate_sorted_var_coll[:, :, np.newaxis], min_num_trials, axis=2)
+            
+            # list_slopes_dr = list_slopes_all_an_loglog[ind].copy()
+            list_slopes_dr = list_slopes_all_an_loglog_onscreen[ind].copy()
 
-        list_rate_tt = [None] * num_trial_types
-        for trial_type_ind, trial_type in enumerate(np.arange(-1, 118, 1).astype(int)):
-            list_rate_tt[trial_type_ind] = rate.loc[:, trial_type].iloc[:, :min_num_trials].copy()
+            # trial shuffling
+            rate_shuf = np.zeros_like(rate_sorted)
+            for neu_ind in range(rate_sorted.shape[0]):
+                shuf_inds = np.random.permutation(rate_sorted.shape[2])
+                rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy()
+            # rate_sorted = rate_shuf.copy()
 
-        rate = np.stack(list_rate_tt, axis=2)
-        rate_sorted = np.transpose(rate, (0, 2, 1)) # num_neurons x num_trial_types x num_trials
-    
-        rate_sorted_mean_coll, rate_sorted_var_coll = np.mean(rate_sorted, axis=2), np.var(rate_sorted, axis=2, ddof=1)
-        rate_sorted_mean, rate_sorted_var = np.repeat(rate_sorted_mean_coll[:, :, np.newaxis], min_num_trials, axis=2), \
-            np.repeat(rate_sorted_var_coll[:, :, np.newaxis], min_num_trials, axis=2)
-        
-        list_slopes_dr = list_slopes_all_an_loglog[ind].copy()
+            # trial order re-randomization
+            for trial_type_ind in range(num_trial_types):
+                rate_sorted[:, trial_type_ind, :] = rate_sorted[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
 
-        # # trial shuffling
-        # rate_shuf = np.zeros_like(rate_sorted)
-        # for neu_ind in range(rate_sorted.shape[0]):
-        #     shuf_inds = np.random.permutation(rate_sorted.shape[2])
-        #     rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
-        # rate_sorted = rate_shuf.copy()
+            if slope_ind == 0:
 
-        # trial order re-randomization
-        for trial_type_ind in range(num_trial_types):
-            rate_sorted[:, trial_type_ind, :] = rate_sorted[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
+                # repeat calculating similarity matrices
+                
+                # n_neurons x n_stimuli 2D matrix sampling
 
-        if slope_ind == 0:
+                # if ind == 3:
+                #     list_num_trials = [rate_RRneuron_dr.loc[:, trial_type].shape[1] for trial_type in rate_sorted_mean_coll.columns] 
+                tt_pairs = list(combinations(range(min_num_trials), 2))
+                n_sampling = np.min([len(tt_pairs), 10000])
+                # n_sampling = len(tt_pairs)
+
+                list_RSM = np.zeros((n_sampling, num_trial_types, num_trial_types))
+
+                count = 0
+                for sampling_ind in range(n_sampling):
+                    rate_sampled_trials1 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][0]]).copy()
+                    rate_sampled_trials2 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][1]]).copy()
+
+                    # calculate similarity matrix
+                    RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2))
+
+                    # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos))
+                    list_RSM[sampling_ind] = RSM.copy()
+
+                    count += 1
+                    if count % 100 == 0:
+                        print(f'count: {count}')
+
+                RSM_mean = np.nanmean(list_RSM, axis=0) # nanmean!
+                list_RSM_mean_asis[ind] = RSM_mean.copy()
+
+            # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
+            rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
+            rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
+
+            # RRneuron
+
+            # calculate target variance
+            var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
+
+            # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
+            # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed
+            offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :])
+
+            var_rs_noisy = \
+                pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
+                    / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # collapsed
+            var_rs_noisy = np.repeat(np.squeeze(var_rs_noisy)[:, :, np.newaxis], min_num_trials, axis=2)
+
+            # Compute changed residual and add back to the mean            
+            rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
+            # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
+            #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
+            rate_resid_RRneuron_dr = rate_sorted_resid_dr / np.sqrt(rate_sorted_var) \
+                * np.sqrt(var_rs_noisy)
+            # print(rate_resid_RRneuron_dr)
+            rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
+            rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!
+
+            list_rate_RRneuron_dr[ind] = rate_RRneuron_dr.copy()
+
+            # # trial order re-randomization
+            # for trial_type_ind in range(num_trial_types):
+            #     rate_RRneuron_dr[:, trial_type_ind, :] = rate_RRneuron_dr[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
 
             # repeat calculating similarity matrices
 
@@ -198,13 +270,12 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type='cos_sim')
             count = 0
             for sampling_ind in range(n_sampling):
                 
-                rate_sampled_trials1 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][0]]).copy() 
-                rate_sampled_trials2 = np.squeeze(rate_sorted[:, :, tt_pairs[sampling_ind][1]]).copy()
+                rate_sampled_trials1 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][0]]).copy()
+                rate_sampled_trials2 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][1]]).copy()
 
-                # calculate similarity matrix
-                RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
+                RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2))
 
-                # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
+                # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos))
                 list_RSM[sampling_ind] = RSM.copy()
                 
                 count += 1
@@ -212,82 +283,20 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type='cos_sim')
                     print(f'count: {count}')
 
             RSM_mean = np.nanmean(list_RSM, axis=0) # nanmean!
-            list_RSM_mean_asis[ind] = RSM_mean.copy()
+            list_RSM_mean_RRneuron[ind] = RSM_mean.copy()
 
-        # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
-        rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
-        rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
-
-        # Change slope
-
-        # calculate target variance
-        var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
-
-        # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
-        # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
-        offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) 
-
-        var_rs_noisy = \
-            pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
-                / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # collapsed
-        var_rs_noisy = np.repeat(np.squeeze(var_rs_noisy)[:, :, np.newaxis], min_num_trials, axis=2)
-
-        # Compute changed residual and add back to the mean            
-        rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
-        # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
-        #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
-        rate_resid_RRneuron_dr = rate_sorted_resid_dr / np.sqrt(rate_sorted_var) \
-            * np.sqrt(var_rs_noisy)
-        # print(rate_resid_RRneuron_dr)
-        rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
-        rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!
-
-        list_rate_RRneuron_dr[ind] = rate_RRneuron_dr.copy()
-
-        # # trial order re-randomization
-        # for trial_type_ind in range(num_trial_types):
-        #     rate_RRneuron_dr[:, trial_type_ind, :] = rate_RRneuron_dr[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
-
-        # repeat calculating similarity matrices
-
-        # n_neurons x n_stimuli 2D matrix sampling
-
-        # if ind == 3:
-        #     list_num_trials = [rate_RRneuron_dr.loc[:, trial_type].shape[1] for trial_type in rate_sorted_mean_coll.columns] 
-        tt_pairs = list(combinations(range(min_num_trials), 2))
-        n_sampling = np.min([len(tt_pairs), 10000])
-        # n_sampling = len(tt_pairs)
-
-        list_RSM = np.zeros((n_sampling, num_trial_types, num_trial_types))
-        
-        count = 0
-        for sampling_ind in range(n_sampling):
-            
-            rate_sampled_trials1 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][0]]).copy() 
-            rate_sampled_trials2 = np.squeeze(rate_RRneuron_dr[:, :, tt_pairs[sampling_ind][1]]).copy()
-
-            RSM = np.array(normc(rate_sampled_trials1).T) @ np.array(normc(rate_sampled_trials2)) 
-
-            # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
-            list_RSM[sampling_ind] = RSM.copy()
-            
-            count += 1
-            if count % 100 == 0:
-                print(f'count: {count}')
-
-        RSM_mean = np.nanmean(list_RSM, axis=0) # nanmean!
-        list_RSM_mean_RRneuron[ind] = RSM_mean.copy()
+            # print(f'target_slope {target_slope:.1f}, ind: {ind}, duration {(time()-start_time)/60:.2f} min')
 
     # Spearman correlation across session pairs
     sess_pairs = list(combinations(range(num_sess), 2))
-    list_corr_sesspair_asis = np.zeros((len(sess_pairs), 3)) 
-    list_corr_sesspair = np.zeros((len(sess_pairs), 3)) 
+    list_corr_sesspair_asis = np.zeros((len(sess_pairs), 3))
+    list_corr_sesspair = np.zeros((len(sess_pairs), 3))
     for pair_ind, pair in enumerate(sess_pairs):
         if slope_ind == 0:
             RSM_mean_neu1 = list_RSM_mean_asis[pair[0]].copy()
             RSM_mean_neu2 = list_RSM_mean_asis[pair[1]].copy()
 
-            list_corr_sesspair_asis[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
+            list_corr_sesspair_asis[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic
             bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
             list_corr_sesspair_asis[pair_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
             list_corr_sesspair_asis[pair_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
@@ -295,13 +304,14 @@ def RSA_across_sesspairs_ABO(slope_ind, target_slope, similarity_type='cos_sim')
         RSM_mean_neu1 = list_RSM_mean_RRneuron[pair[0]].copy()
         RSM_mean_neu2 = list_RSM_mean_RRneuron[pair[1]].copy()
 
-        list_corr_sesspair[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
+        list_corr_sesspair[pair_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic
         bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
         list_corr_sesspair[pair_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
         list_corr_sesspair[pair_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
     filename = 'RSM_corr_sesspair_ABO_allneu_' + similarity_type + str(slope_ind) + '.pickle'
+    filename = 'RSM_corr_sesspair_ABO_allneu_onscreen_' + similarity_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_RSM_mean_asis', 'list_corr_sesspair_asis', 'list_rate_RRneuron_dr', 'list_RSM_mean_RRneuron', 'list_corr_sesspair'], \
                      'list_RSM_mean_asis': list_RSM_mean_asis, 'list_corr_sesspair_asis': list_corr_sesspair_asis,
@@ -537,91 +547,130 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type='cos_sim'):
     list_corr_withinsess2 = np.full((num_sess, n_neu_sampling, 3), np.nan) 
 
     for sess_ind in range(num_sess):
+        if sess_ind != 7: # all spike count is zero in receptive field mapping block
+            print(f'sess_ind: {sess_ind}')
 
-        print(f'sess_ind: {sess_ind}')
+            rate = list_rate_all[sess_ind].copy()
+            # rate_sorted = rate.sort_index(axis=1)
+            stm = rate.columns.copy()
 
-        rate = list_rate_all[sess_ind].copy()
-        # rate_sorted = rate.sort_index(axis=1)
-        stm = rate.columns.copy()
+            bool_onscreen = list_rfmet2[sess_ind][:, -1].astype(bool) # deepcopy
+            rate = rate.loc[bool_onscreen]
 
-        # Multiply by delta t to convert to spike counts
-        rate = rate * 0.25
+            # Multiply by delta t to convert to spike counts
+            rate = rate * 0.25
 
-        # Create a counting dictionary for each stimulus
-        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
-        stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
-        
-        # convert to 3D response matrix
-        min_num_trials = np.min(all_stm_counts) # session 4 has heterogeneous numbers of trials (minimum 47)
-
-        list_rate_tt = [None] * num_trial_types
-        for trial_type_ind, trial_type in enumerate(np.arange(-1, 118, 1).astype(int)):
-            list_rate_tt[trial_type_ind] = rate.loc[:, trial_type].iloc[:, :min_num_trials].copy()
-
-        rate = np.stack(list_rate_tt, axis=2)
-        rate_sorted = np.transpose(rate, (0, 2, 1)) # num_neurons x num_trial_types x num_trials
-    
-        rate_sorted_mean_coll, rate_sorted_var_coll = np.mean(rate_sorted, axis=2), np.var(rate_sorted, axis=2, ddof=1)
-        rate_sorted_mean, rate_sorted_var = np.repeat(rate_sorted_mean_coll[:, :, np.newaxis], min_num_trials, axis=2), \
-            np.repeat(rate_sorted_var_coll[:, :, np.newaxis], min_num_trials, axis=2)
-        
-        list_slopes_dr = list_slopes_all_an_loglog[sess_ind].copy()
-
-        # trial shuffling
-        rate_shuf = np.zeros_like(rate_sorted)
-        for neu_ind in range(rate_sorted.shape[0]):
-            shuf_inds = np.random.permutation(rate_sorted.shape[2])
-            rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
-        # rate_sorted = rate_shuf.copy()
-
-        # trial order re-randomization
-        for trial_type_ind in range(num_trial_types):
-            rate_sorted[:, trial_type_ind, :] = rate_sorted[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
-
-        # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
-        rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
-        rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
-
-        # calculate target variance
-        var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
-
-        # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
-        # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
-        offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) 
-
-        var_rs_noisy = \
-            pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
-                / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # collapsed
-        var_rs_noisy = np.repeat(np.squeeze(var_rs_noisy)[:, :, np.newaxis], min_num_trials, axis=2)
-
-        # Compute changed residual and add back to the mean            
-        rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
-        # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
-        #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
-        rate_resid_RRneuron_dr = rate_sorted_resid_dr / np.sqrt(rate_sorted_var) \
-            * np.sqrt(var_rs_noisy)
-        # print(rate_resid_RRneuron_dr)
-        rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
-        rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!      
-
-        # # trial order re-randomization
-        # for trial_type_ind in range(num_trial_types):
-        #     rate_RRneuron_dr[:, trial_type_ind, :] = rate_RRneuron_dr[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)] 
-
-        # Iterate over neuron partitionings
-        for neu_sample_ind in range(n_neu_sampling):
-            print(f'neu_sample_ind = {neu_sample_ind}')
+            # Create a counting dictionary for each stimulus
+            all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
+            stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
             
-            # Partition neurons
-            neu_inds_permuted = np.random.permutation(range(rate_sorted.shape[0]))
-            neu_div_inds1 = neu_inds_permuted[:int(rate_sorted.shape[0]/2)].copy() # 5:5 partitioning
-            neu_div_inds2 = neu_inds_permuted[int(rate_sorted.shape[0]/2):].copy()
-            if neu_div_inds2.shape[0] > neu_div_inds1.shape[0]: # if num_neurons is odd number
-                neu_div_inds2 = neu_div_inds2[:-1].copy()
+            # convert to 3D response matrix
+            min_num_trials = np.min(all_stm_counts) # session 4 has heterogeneous numbers of trials (minimum 47)
 
-            # as-is
+            list_rate_tt = [None] * num_trial_types
+            for trial_type_ind, trial_type in enumerate(np.arange(-1, 118, 1).astype(int)):
+                list_rate_tt[trial_type_ind] = rate.loc[:, trial_type].iloc[:, :min_num_trials].copy()
 
-            if slope_ind == 0:
+            rate = np.stack(list_rate_tt, axis=2)
+            rate_sorted = np.transpose(rate, (0, 2, 1)) # num_neurons x num_trial_types x num_trials
+        
+            rate_sorted_mean_coll, rate_sorted_var_coll = np.mean(rate_sorted, axis=2), np.var(rate_sorted, axis=2, ddof=1)
+            rate_sorted_mean, rate_sorted_var = np.repeat(rate_sorted_mean_coll[:, :, np.newaxis], min_num_trials, axis=2), \
+                np.repeat(rate_sorted_var_coll[:, :, np.newaxis], min_num_trials, axis=2)
+            
+            # list_slopes_dr = list_slopes_all_an_loglog[sess_ind].copy()
+            list_slopes_dr = list_slopes_all_an_loglog_onscreen[sess_ind].copy()
+
+            # trial shuffling
+            rate_shuf = np.zeros_like(rate_sorted)
+            for neu_ind in range(rate_sorted.shape[0]):
+                shuf_inds = np.random.permutation(rate_sorted.shape[2])
+                rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
+            # rate_sorted = rate_shuf.copy()
+
+            # trial order re-randomization
+            for trial_type_ind in range(num_trial_types):
+                rate_sorted[:, trial_type_ind, :] = rate_sorted[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
+
+            # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
+            rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
+            rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
+
+            # calculate target variance
+            var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
+
+            # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
+            # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
+            offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) 
+
+            var_rs_noisy = \
+                pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
+                    / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # collapsed
+            var_rs_noisy = np.repeat(np.squeeze(var_rs_noisy)[:, :, np.newaxis], min_num_trials, axis=2)
+
+            # Compute changed residual and add back to the mean            
+            rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
+            # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
+            #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
+            rate_resid_RRneuron_dr = rate_sorted_resid_dr / np.sqrt(rate_sorted_var) \
+                * np.sqrt(var_rs_noisy)
+            # print(rate_resid_RRneuron_dr)
+            rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
+            rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!      
+
+            # # trial order re-randomization
+            # for trial_type_ind in range(num_trial_types):
+            #     rate_RRneuron_dr[:, trial_type_ind, :] = rate_RRneuron_dr[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)] 
+
+            # Iterate over neuron partitionings
+            for neu_sample_ind in range(n_neu_sampling):
+                print(f'neu_sample_ind = {neu_sample_ind}')
+                
+                # Partition neurons
+                neu_inds_permuted = np.random.permutation(range(rate_sorted.shape[0]))
+                neu_div_inds1 = neu_inds_permuted[:int(rate_sorted.shape[0]/2)].copy() # 5:5 partitioning
+                neu_div_inds2 = neu_inds_permuted[int(rate_sorted.shape[0]/2):].copy()
+                if neu_div_inds2.shape[0] > neu_div_inds1.shape[0]: # if num_neurons is odd number
+                    neu_div_inds2 = neu_div_inds2[:-1].copy()
+
+                # as-is
+
+                if slope_ind == 0:
+
+                    # repeat calculating similarity matrices
+                    
+                    # n_neurons x n_stimuli 2D matrix sampling
+                    
+                    tt_pairs = list(combinations(range(min_num_trials), 2))
+                    # random.shuffle(tt_pairs) 
+                    n_sampling = np.min([len(tt_pairs), 10000])
+                    # n_sampling = len(tt_pairs)
+
+                    list_RSM_neu1 = np.zeros((n_sampling, num_trial_types, num_trial_types), dtype=np.float32)
+                    list_RSM_neu2 = np.zeros((n_sampling, num_trial_types, num_trial_types), dtype=np.float32)
+
+                    count = 0
+                    for sampling_ind in range(n_sampling):
+                        
+                        rate_sampled_trials1_1 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
+                        rate_sampled_trials1_2 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
+                        rate_sampled_trials2_1 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
+                        rate_sampled_trials2_2 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
+
+                        RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
+                        RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
+
+                        list_RSM_neu1[sampling_ind] = RSM1.copy()
+                        list_RSM_neu2[sampling_ind] = RSM2.copy()
+
+                    RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # Average across trial samplings
+                    RSM_mean_neu2 = np.nanmean(list_RSM_neu2, axis=0)
+                    list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
+                    bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
+                    list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
+                    list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
+            
+                # Change slope
 
                 # repeat calculating similarity matrices
                 
@@ -638,66 +687,32 @@ def RSA_withinsess_ABO(slope_ind, target_slope, similarity_type='cos_sim'):
                 count = 0
                 for sampling_ind in range(n_sampling):
                     
-                    rate_sampled_trials1_1 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
-                    rate_sampled_trials1_2 = np.squeeze(rate_sorted[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
-                    rate_sampled_trials2_1 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
-                    rate_sampled_trials2_2 = np.squeeze(rate_sorted[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
+                    rate_sampled_trials1_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
+                    rate_sampled_trials1_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
+                    rate_sampled_trials2_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
+                    rate_sampled_trials2_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
 
                     RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
                     RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
 
+                    # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
                     list_RSM_neu1[sampling_ind] = RSM1.copy()
                     list_RSM_neu2[sampling_ind] = RSM2.copy()
 
+                    count += 1
+                    if count % 1000 == 0:
+                        print(f'count: {count}')
+
                 RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # Average across trial samplings
                 RSM_mean_neu2 = np.nanmean(list_RSM_neu2, axis=0)
-                list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
+                list_corr_withinsess2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
                 bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
-                list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
-                list_corr_withinsess_asis2[sess_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
-        
-            # Change slope
-
-            # repeat calculating similarity matrices
-            
-            # n_neurons x n_stimuli 2D matrix sampling
-            
-            tt_pairs = list(combinations(range(min_num_trials), 2))
-            # random.shuffle(tt_pairs) 
-            n_sampling = np.min([len(tt_pairs), 10000])
-            # n_sampling = len(tt_pairs)
-
-            list_RSM_neu1 = np.zeros((n_sampling, num_trial_types, num_trial_types), dtype=np.float32)
-            list_RSM_neu2 = np.zeros((n_sampling, num_trial_types, num_trial_types), dtype=np.float32)
-
-            count = 0
-            for sampling_ind in range(n_sampling):
-                
-                rate_sampled_trials1_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][0]]).copy() 
-                rate_sampled_trials1_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds1, :, tt_pairs[sampling_ind][1]]).copy()
-                rate_sampled_trials2_1 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][0]]).copy() 
-                rate_sampled_trials2_2 = np.squeeze(rate_RRneuron_dr[neu_div_inds2, :, tt_pairs[sampling_ind][1]]).copy()
-
-                RSM1 = np.array(normc(rate_sampled_trials1_1).T) @ np.array(normc(rate_sampled_trials1_2)) 
-                RSM2 = np.array(normc(rate_sampled_trials2_1).T) @ np.array(normc(rate_sampled_trials2_2)) 
-
-                # RSM_cos = RSM_cos + RSM_cos.T - np.diag(np.diag(RSM_cos)) 
-                list_RSM_neu1[sampling_ind] = RSM1.copy()
-                list_RSM_neu2[sampling_ind] = RSM2.copy()
-
-                count += 1
-                if count % 1000 == 0:
-                    print(f'count: {count}')
-
-            RSM_mean_neu1 = np.nanmean(list_RSM_neu1, axis=0) # Average across trial samplings
-            RSM_mean_neu2 = np.nanmean(list_RSM_neu2, axis=0)
-            list_corr_withinsess2[sess_ind, neu_sample_ind, 0] = spearmanr(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten(), nan_policy='omit').statistic 
-            bool_notnan = np.logical_and(~np.isnan(RSM_mean_neu1.flatten()), ~np.isnan(RSM_mean_neu2.flatten()))
-            list_corr_withinsess2[sess_ind, neu_sample_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
-            list_corr_withinsess2[sess_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
+                list_corr_withinsess2[sess_ind, neu_sample_ind, 1] = np.corrcoef(RSM_mean_neu1.flatten()[bool_notnan], RSM_mean_neu2.flatten()[bool_notnan])[0, 1]
+                list_corr_withinsess2[sess_ind, neu_sample_ind, 2] = cos_sim(RSM_mean_neu1.flatten(), RSM_mean_neu2.flatten())
 
     # Save into a file
     filename = 'RSM_corr_withinsess_ABO_' + similarity_type + str(slope_ind) + '.pickle'
+    filename = 'RSM_corr_withinsess_ABO_onscreen_' + similarity_type + str(slope_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['list_corr_withinsess_asis2', 'list_corr_withinsess2'], \
                     'list_corr_withinsess_asis2': list_corr_withinsess_asis2, 'list_corr_withinsess2': list_corr_withinsess2}, f)
@@ -911,7 +926,7 @@ def RSA_withinsess_ABO_HVA(slope_ind, target_slope, similarity_type='cos_sim'):
 # decoding (ABO)
 def decode_ABO(sess_ind, decoder_type):
 
-    ''' decoder_type is SVM, logit,, RF, kNN '''
+    ''' decoder_type is SVM, logit, Bayesian, RF, kNN '''
 
     # ignore warnings
     with warnings.catch_warnings():
@@ -931,11 +946,13 @@ def decode_ABO(sess_ind, decoder_type):
         np.random.seed(0)
 
         all_stimuli = np.arange(-1, 118, 1).astype(int) # include grayscreen trials
-        probe_stimuli = np.array([5, 12, 24, 34, 36, 44, 47, 78, 83, 87, 104, 111, 114, 115])
         # train_stimuli = all_stimuli[~np.isin(all_stimuli, probe_stimuli)].copy()
         train_stimuli = all_stimuli.copy()
 
         rate = list_rate_all[sess_ind].copy()
+
+        bool_onscreen = list_rfmet2[sess_ind][:, -1].astype(bool) # deepcopy
+        rate = rate.loc[bool_onscreen]
         
         # print(f'sess_ind: {sess_ind}')
 
@@ -946,7 +963,7 @@ def decode_ABO(sess_ind, decoder_type):
         rate = rate * 0.25
 
         # Create a counting dictionary for each stimulus
-        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True) 
+        all_stm_unique, all_stm_counts = np.unique(stm, return_counts=True)
         stm_cnt_dict = dict(zip(all_stm_unique, all_stm_counts))
         
         # convert to 3D response matrix
@@ -963,7 +980,7 @@ def decode_ABO(sess_ind, decoder_type):
         rate_shuf = np.zeros_like(rate_sorted)
         for neu_ind in range(rate_sorted.shape[0]):
             shuf_inds = np.random.permutation(rate_sorted.shape[2])
-            rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy() 
+            rate_shuf[neu_ind] = rate_sorted[neu_ind, :, shuf_inds].T.copy()
         # rate_sorted = rate_shuf.copy()
 
         # Compute mean & variance for each stimulus
@@ -971,34 +988,66 @@ def decode_ABO(sess_ind, decoder_type):
         rate_sorted_mean, rate_sorted_var = np.repeat(rate_sorted_mean_coll[:, :, np.newaxis], min_num_trials, axis=2), \
             np.repeat(rate_sorted_var_coll[:, :, np.newaxis], min_num_trials, axis=2)
 
-        list_slopes_dr = list_slopes_all_an_loglog[sess_ind].copy()
+        # list_slopes_dr = list_slopes_all_an_loglog[sess_ind].copy()
+        list_slopes_dr = list_slopes_all_an_loglog_onscreen[sess_ind].copy()
 
         # trial order re-randomization
         for trial_type_ind in range(num_trial_types):
             rate_sorted[:, trial_type_ind, :] = rate_sorted[:, trial_type_ind, np.random.choice(range(min_num_trials), min_num_trials, replace=False)]
-        
+
+        # # RRneuron0 (train at slope 0, test at the other slopes)
+        # target_slope = 0
+
+        # # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
+        # rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
+        # rate_sorted_var_coll[rate_sorted_var_coll == 0] = np.nan
+
+        # # calculate target variance
+        # var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
+
+        # # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
+        # # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed
+        # offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :])
+
+        # var_rs_noisy = \
+        #     pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
+        #         / list_slopes_dr[0, :] * target_slope + np.log10(np.array(offset))) # collapsed
+        # var_rs_noisy = np.repeat(np.squeeze(var_rs_noisy)[:, :, np.newaxis], min_num_trials, axis=2)
+
+        # # Compute changed residual and add back to the mean
+        # rate_sorted_resid_dr = rate_sorted - rate_sorted_mean
+        # # rate_resid_RRneuron_dr = rate_sorted_resid_dr.div(np.sqrt(rate_sorted_var))\
+        # #     .mul(np.sqrt(rate_sorted_mean)).mul(np.sqrt(FF_estim_dr), axis=1)
+        # rate_resid_RRneuron_dr = rate_sorted_resid_dr / np.sqrt(rate_sorted_var) \
+        #     * np.sqrt(var_rs_noisy)
+        # # print(rate_resid_RRneuron_dr)
+        # rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
+        # rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!
+
         # decoding cross-validation (as-is)
         kfold = KFold(n_splits=n_splits)
         stkfold = StratifiedKFold(n_splits=n_splits)
 
         # Re-convert to 2D response matrix
-        label_train = np.repeat(all_stimuli, min_num_trials)
-        rate_train = pd.DataFrame(rate_sorted.reshape(rate_sorted.shape[0], -1), columns=label_train)
-        
-        # decoding cross-validation (as-is)
-        kfold = KFold(n_splits=n_splits)
-        stkfold = StratifiedKFold(n_splits=n_splits)
+        labels = np.repeat(all_stimuli, min_num_trials)
+        rate_2d = pd.DataFrame(rate_sorted.reshape(rate_sorted.shape[0], -1), columns=labels)
+        # rate_mean_2d, rate_std_2d = rate_2d.mean(axis=1), rate_2d.std(axis=1)
+        # rate_2d = rate_2d.sub(rate_mean_2d, axis=0).div(rate_std_2d, axis=0) # z-scoring
+        # rate_2d = pd.DataFrame(rate_RRneuron_dr.reshape(rate_sorted.shape[0], -1), columns=labels) # train at slope 0, test at the other slopes
+        # rate_probe = pd.DataFrame(rate_sorted.reshape(rate_sorted.shape[0], -1), columns=labels)
 
         list_confusion_test = np.full((n_splits, len(train_stimuli), len(train_stimuli)), np.nan)
         list_accuracy = np.full(n_splits, np.nan)
 
         if decoder_type in ['SVM', 'logit', 'RF', 'kNN']:
-
-            for split_ind, (train_index, test_index) in enumerate(stkfold.split(rate_train.T, label_train)):
-                X_train, X_test = rate_train.T.iloc[train_index].copy(), rate_train.T.iloc[test_index].copy() # train, test data/label
-                y_train, y_test = label_train[train_index].copy(), label_train[test_index].copy()
+            for split_ind, (train_index, test_index) in enumerate(stkfold.split(rate_2d.T, labels)):
+            # for probe_ind, probe_stim in enumerate(all_stimuli):
+                X_train, X_test = rate_2d.T.iloc[train_index].copy(), rate_2d.T.iloc[test_index].copy() # train, test data/label
+                y_train, y_test = labels[train_index].copy(), labels[test_index].copy()
+                # X_test, y_test = rate_probe.T.iloc[test_index].copy(), labels[test_index].copy() # train at slope 0, test at the other slopes
 
                 mean_ = X_train.mean(axis=0)
+                std_ = X_train.std(axis=0)
                 X_train = X_train.sub(mean_, axis=1) # train data mean centering
                 X_test = X_test.sub(mean_, axis=1)
 
@@ -1009,7 +1058,7 @@ def decode_ABO(sess_ind, decoder_type):
                 elif decoder_type == 'RF':
                     clf = rf()
                 elif decoder_type == 'kNN':
-                    clf = KNeighborsClassifier(n_neighbors=30)  
+                    clf = KNeighborsClassifier(n_neighbors=30) 
                                 
                 clf.fit(X_train, y_train) # SVC fitting to train data
                 
@@ -1034,14 +1083,13 @@ def decode_ABO(sess_ind, decoder_type):
         mean_accuracy_asis = np.mean(list_accuracy)
         # print(round(mean_accuracy, ndigits=3))
 
-        # Change slope
+        # RRneuron
         list_mean_confusion_test_RRneuron = np.full((len(list_target_slopes), len(train_stimuli), len(train_stimuli)), np.nan)
         list_mean_accuracy_RRneuron = np.full(len(list_target_slopes), np.nan)
-
         for slope_ind, target_slope in enumerate(list_target_slopes):
             start_time = time()
 
-            print(f'sess_ind: {sess_ind}, target slope {target_slope:.1f}')
+            # print(f'sess_ind: {sess_ind}, target slope {target_slope:.1f}')
                                 
             # Convert 0 to NaN (verified that cases of mean=0 and var=0 coincide exactly)
             rate_sorted_mean_coll[rate_sorted_mean_coll == 0] = np.nan
@@ -1051,8 +1099,8 @@ def decode_ABO(sess_ind, decoder_type):
             var_estim_dr = np.nanmean(rate_sorted_var_coll, axis=0)
 
             # offset = var_estim_dr.div(rate_sorted_var_coll.pow(target_slope/list_slopes_dr.iloc[0, :], axis=1).mean(axis=0))\
-            # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed 
-            offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :]) 
+            # .mul(pow(10, target_slope * list_slopes_dr.iloc[1, :] / list_slopes_dr.iloc[0, :])) # collapsed
+            offset = pow(10, (list_slopes_dr[0, :]-target_slope) * np.nanmean(np.log10(rate_sorted_mean_coll), axis=0) + list_slopes_dr[1, :])
 
             var_rs_noisy = \
                 pow(10, (np.log10(rate_sorted_var_coll) - list_slopes_dr[1, :])\
@@ -1067,7 +1115,10 @@ def decode_ABO(sess_ind, decoder_type):
                 * np.sqrt(var_rs_noisy)
             # print(rate_resid_RRneuron_dr)
             rate_RRneuron_dr = rate_sorted_mean + rate_resid_RRneuron_dr
-            rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!        
+            rate_RRneuron_dr[np.isnan(rate_RRneuron_dr)] = 0 # convert NaN to 0!
+
+            # if target_slope == 0:
+            #     rate_RRneuron_dr0 = rate_RRneuron_dr.copy()
 
             # # trial order re-randomization
             # for trial_type_ind in range(num_trial_types):
@@ -1076,9 +1127,11 @@ def decode_ABO(sess_ind, decoder_type):
             # decoding cross-validation (RRneuron)  
 
             # Re-convert to 2D response matrix
-            label_train_RRneuron = np.repeat(all_stimuli, min_num_trials)
-            rate_train_RRneuron = pd.DataFrame(rate_RRneuron_dr.reshape(rate_RRneuron_dr.shape[0], -1), columns=label_train_RRneuron)
-            
+            labels_RRneuron = np.repeat(all_stimuli, min_num_trials)
+            rate_2d_RRneuron = pd.DataFrame(rate_RRneuron_dr.reshape(rate_RRneuron_dr.shape[0], -1), columns=labels_RRneuron)
+            # rate_2d_RRneuron = pd.DataFrame(rate_RRneuron_dr0.reshape(rate_RRneuron_dr0.shape[0], -1), columns=labels_RRneuron) # train at slope 0, test at the other slopes
+            # rate_probe_RRneuron = pd.DataFrame(rate_RRneuron_dr.reshape(rate_RRneuron_dr.shape[0], -1), columns=labels_RRneuron)
+
             # decoding cross-validation (as-is)
             kfold = KFold(n_splits=n_splits)
             stkfold = StratifiedKFold(n_splits=n_splits)
@@ -1088,11 +1141,14 @@ def decode_ABO(sess_ind, decoder_type):
 
             if decoder_type in ['SVM', 'logit', 'RF', 'kNN']:
 
-                for split_ind, (train_index, test_index) in enumerate(stkfold.split(rate_train_RRneuron.T, label_train_RRneuron)):
-                    X_train, X_test = rate_train_RRneuron.T.iloc[train_index].copy(), rate_train_RRneuron.T.iloc[test_index].copy() # train, test data/label
-                    y_train, y_test = label_train_RRneuron[train_index].copy(), label_train_RRneuron[test_index].copy()
+                for split_ind, (train_index, test_index) in enumerate(stkfold.split(rate_2d_RRneuron.T, labels_RRneuron)):
+                # for probe_ind, probe_stim in enumerate(all_stimuli):
+                    X_train, X_test = rate_2d_RRneuron.T.iloc[train_index].copy(), rate_2d_RRneuron.T.iloc[test_index].copy() # train, test data/label
+                    y_train, y_test = labels_RRneuron[train_index].copy(), labels_RRneuron[test_index].copy()
+                    # X_test, y_test = rate_probe_RRneuron.T.iloc[test_index].copy(), labels_RRneuron[test_index].copy() # train at slope 0, test at the other slopes
 
                     mean_ = X_train.mean(axis=0)
+                    std_ = X_train.std(axis=0)
                     X_train = X_train.sub(mean_, axis=1) # train data mean centering
                     X_test = X_test.sub(mean_, axis=1)
 
@@ -1103,7 +1159,7 @@ def decode_ABO(sess_ind, decoder_type):
                     elif decoder_type == 'RF':
                         clf = rf()
                     elif decoder_type == 'kNN':
-                        clf = KNeighborsClassifier(n_neighbors=30) 
+                        clf = KNeighborsClassifier(n_neighbors=30)
                                         
                     clf.fit(X_train, y_train) # SVC fitting to train data
                     
@@ -1134,6 +1190,9 @@ def decode_ABO(sess_ind, decoder_type):
 
     # Save into a file
     filename = decoder_type + '_decoding_ABO_allstim_' + str(sess_ind) + '.pickle'
+    filename = decoder_type + '_decoding_ABO_allstim_shuf_' + str(sess_ind) + '.pickle'
+    filename = decoder_type + '_decoding_ABO_allstim_onscreen_' + str(sess_ind) + '.pickle'
+    # filename = decoder_type + '_decoding_ABO_allstim_train0_' + str(sess_ind) + '.pickle'
     with open(filename, "wb") as f:
         pickle.dump({'tree_variables': ['mean_confusion_test_asis', 'mean_accuracy_asis', 'list_mean_confusion_test_RRneuron', 'list_mean_accuracy_RRneuron'],
                      'mean_confusion_test_asis': mean_confusion_test_asis, 'mean_accuracy_asis': mean_accuracy_asis,
@@ -1391,6 +1450,19 @@ with open('resp_matrix_ep_HVA_allensdk.pickle', 'rb') as f:
     list_rate_all_HVA = dc(resp_matrix_ep_HVA_allensdk['list_rate_all_HVA'])
     list_slopes_all_an_loglog_HVA = dc(resp_matrix_ep_HVA_allensdk['list_slopes_all_an_loglog_HVA'])
     list_empty_sess2 = dc(resp_matrix_ep_HVA_allensdk['list_empty_sess2'])
+
+with open('resp_matrix_ep_naturalmovie_FC_allensdk.pickle', 'rb') as f:
+    resp_matrix_ep_naturalmovie = pickle.load(f)
+    brain_observatory_sessid = resp_matrix_ep_naturalmovie['brain_observatory_sessid'].copy()
+    list_sess_ids = resp_matrix_ep_naturalmovie['list_sess_ids'].copy()
+
+# receptive field metrics for each V1 unit
+save_file_name = 'unit_rf_metrics_all.pickle'
+with open(save_file_name, 'rb') as f:
+    unit_rf_metrics_all = pickle.load(f)
+    list_rfmet2 = unit_rf_metrics_all['list_rfmet2'].copy()
+    list_slopes_all_an_loglog_onscreen = unit_rf_metrics_all['list_slopes_all_an_loglog_onscreen'].copy()
+list_rfmet2 = list_rfmet2[np.isin(list_sess_ids, brain_observatory_sessid)]
 
 # %%
 # multiprocessing
