@@ -7,43 +7,15 @@ This repository contains the source code for the manuscript "Intrinsic geometry 
 - MATLAB scripts (`.m`)  
 
 ## 2. How to run the code
-### 2-1. Environment settings
-- The Jupyter Notebooks and Python scripts, except for those inside the folder 'spiking network simulation', have been verified to run using Visual Studio Code (Windows 11) in a Python 3.11.10 virtual environment after installing the packages listed in `requirements.txt` using pip 24.2. (Save `requirements.txt` in the same directory as the Jupyter Notebooks.)
-- The MATLAB scripts have been verified to run in MATLAB R2024b.
-- The Python scripts inside the folder 'spiking network simulation' are for simulation of spiking networks in Linux. They have been verified to run in WSL2 Ubuntu 24.04 using mamba. They were modified from the publicly available code using the NEST Simulator package (Rostami et al., Nat. Commun., 2024; see https://nest-simulator.readthedocs.io/en/stable/auto_examples/EI_clustered_network/index.html for documentation). To simulate the spiking network, follow the instructions below:
-
-First, in Windows PowerShell, install an Ubuntu distro. You can specify the name, for example, 'Ubuntu-24.04-test'.
-```powershell
-wsl --install -d Ubuntu-24.04 --name Ubuntu-24.04-test
-```
-Then, inside the Ubuntu, install Miniforge to use mamba (https://github.com/conda-forge/miniforge).
-```Bash
-wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
-bash Miniforge3-Linux-x86_64.sh -b -p "$HOME/miniforge3"
-mamba shell init --shell bash --root-prefix="$HOME/miniforge3"
-exec bash
-```
-Finally, create a virtual environment using 'ei_network_explicit.txt' which includes the python packages including NEST. You can specify the environment name, for example, 'ei_network'.
-```Bash
-EXPLICIT="/mnt/your_path/ei_network_explicit.txt"
-mamba create -n ei_network --file "$EXPLICIT"
-```
-You can run simulation in the created environment. You should be in the directory containing the simulation scripts ('spiking network simulation' folder).
-```Bash
-cd "/mnt/your_path/spiking network simulation"
-mamba activate ei_network
-python run_simulation.py
-```
-### 2-2. Minimal information to reproduce Figures
+### 2-1. Minimal information to reproduce figures
 **To generate the figures, you only need the Jupyter Notebooks, and pickle.gz files which can be downloaded from https://figshare.com/s/64957e60fe943cb732a7. Those pickle.gz files contain all the variables needed to run the Jupyter Notebooks, so save them in the same directory as the Jupyter Notebooks and run each Jupyter Notebook.**
 
-First, install the packages listed in `requirements.txt` in your Python 3.11.10 virtual environment.
-```bash
+First, install the packages listed in `requirements.txt` in a Python 3.11.10 virtual environment (Save `requirements.txt` in the same directory as the Jupyter Notebooks).
+```cmd
 python -m pip install pip==24.2
 python -m pip install -r requirements.txt
 ```
-
-Second, run each Jupyter Notebook file using Visual Studio Code. You should first run the helper codes at the top of the file. Then, you can independently run specific cells for figures you want (If there are multiple cells for a figure panel, you should run them in order). In each Jupyter Notebook, figure citations are at the top and immediately before each figure-generating cell. In summary:
+Second, run each Jupyter Notebook file using Visual Studio Code. You should first run the helper codes at the top of the Notebook. Then, you can independently run specific cells for figures you want (If there are multiple cells for a figure panel, you should run them in order). In each Notebook, figure citations are at the top and immediately before each figure-generating cell. In summary:
 
 - **decode_noise_corr.ipynb** → Figure 3b, Supplementary Figure 6a, 10a, b, e, 12b, 15b
 - **dimensionality.ipynb** → Figure 2c, Supplementary Figure 10c, d, 12a, 15a
@@ -60,8 +32,35 @@ Second, run each Jupyter Notebook file using Visual Studio Code. You should firs
 - **spiking_network_analysis.ipynb** → Figure 7, Supplementary Figure 16
 - **visualize_manifold.ipynb** → Figure 2e, Supplementary Figure 4b
 
-## 3. How we collected and analyzed data
+### 2-2. Environment settings
+- The Jupyter Notebooks and Python scripts, except for those inside the folder 'spiking network simulation', have been verified to run in a Python 3.11.10 virtual environment using Visual Studio Code (Windows 11).
+- The MATLAB scripts have been verified to run in MATLAB R2024b.
+- The Python scripts inside the 'spiking network simulation' folder are for simulation of spiking networks in Linux (Rostami et al., Nat. Commun., 2024). They have been verified to run in a Python 3.11.13 virtual environment (WSL2 Ubuntu 24.04). They were modified from the publicly available code based on the NEST Simulator package (https://nest-simulator.readthedocs.io/en/stable/auto_examples/EI_clustered_network/index.html). To simulate the spiking network, follow the instructions below:
 
+First, in Windows PowerShell, install an Ubuntu distro. You can specify the name, for example, 'Ubuntu-24.04-test'.
+```powershell
+wsl --install -d Ubuntu-24.04 --name Ubuntu-24.04-test
+```
+Then, inside the Ubuntu, install Miniforge to use Mamba (https://github.com/conda-forge/miniforge).
+```bash
+wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+bash Miniforge3-Linux-x86_64.sh -b -p "$HOME/miniforge3"
+mamba shell init --shell bash --root-prefix="$HOME/miniforge3"
+exec bash
+```
+Finally, create a virtual environment using 'ei_network_explicit.txt' which includes the python packages including NEST. You can specify the environment name, for example, 'ei_network'.
+```bash
+EXPLICIT="/mnt/your_path/ei_network_explicit.txt"
+mamba create -n ei_network --file "$EXPLICIT"
+```
+You can run simulation in the created environment. You should be in the directory containing the simulation scripts ('spiking network simulation' folder).
+```bash
+cd "/mnt/your_path/spiking network simulation"
+mamba activate ei_network
+python run_simulation.py
+```
+
+## 3. How we collected and analyzed data
 ### 3-1. Extracellular electrophysiology datasets
 We downloaded two extracellular electrophysiology datasets using NWB files: Allen Brain Observatory Visual Coding Neuropixels and Visual Behavior Neuropixels. We then extracted single-unit spike counts in MATLAB and saved them as `.mat` files.
    For instructions on downloading NWB files, see the AllenSDK example:
