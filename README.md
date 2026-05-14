@@ -43,6 +43,7 @@ wsl --install -d Ubuntu-24.04 --name Ubuntu-24.04-test
 ```
 Then, in the Ubuntu terminal, install Miniforge to use Mamba (https://github.com/conda-forge/miniforge).
 ```bash
+cd ~
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
 bash Miniforge3-Linux-x86_64.sh -b -p "$HOME/miniforge3"
 mamba shell init --shell bash --root-prefix="$HOME/miniforge3"
