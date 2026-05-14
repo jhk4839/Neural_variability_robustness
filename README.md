@@ -1,4 +1,4 @@
-### 1. File description
+## 1. File description
 
 This repository contains the source code for the manuscript "Intrinsic geometry of trial-to-trial variability in primary visual cortex is optimal for robust representation of visual similarity" (Kim and Shin, 2026). We have 3 types of files:
 
@@ -6,14 +6,13 @@ This repository contains the source code for the manuscript "Intrinsic geometry 
 - Python scripts (`.py`)  
 - MATLAB scripts (`.m`)  
 
-### 2. How to run the code
-#### 2-1. Environment settings
+## 2. How to run the code
+### 2-1. Environment settings
 - The Jupyter Notebooks and Python scripts, except for those inside the folder 'spiking network simulation', have been verified to run using Visual Studio Code (Windows 11) in a Python 3.11.10 virtual environment after installing the packages listed in `requirements.txt` using pip 24.2. (Save `requirements.txt` in the same directory as the Jupyter Notebooks.)
 - The MATLAB scripts have been verified to run in MATLAB R2024b.
 - The Python scripts inside the folder 'spiking network simulation' are for simulation of spiking networks in Linux. They have been verified to run in WSL2 Ubuntu 24.04 using mamba. They were modified from the publicly available code using the NEST Simulator package (Rostami et al., Nat. Commun., 2024; see https://nest-simulator.readthedocs.io/en/stable/auto_examples/EI_clustered_network/index.html for documentation). To simulate the spiking network, follow the instructions below:
 
 First, in Windows PowerShell, install an Ubuntu distro. You can specify the name, for example, 'Ubuntu-24.04-test'.
-**PowerShell**
 ```powershell
 wsl --install -d Ubuntu-24.04 --name Ubuntu-24.04-test
 ```
@@ -35,7 +34,7 @@ cd "/mnt/your_path/spiking network simulation"
 mamba activate ei_network
 python run_simulation.py
 ```
-#### 2-2. Minimal information to reproduce Figures
+### 2-2. Minimal information to reproduce Figures
 **To generate the figures, you only need the Jupyter Notebooks, and pickle.gz files which can be downloaded from https://figshare.com/s/64957e60fe943cb732a7. Those pickle.gz files contain all the variables needed to run the Jupyter Notebooks, so save them in the same directory as the Jupyter Notebooks and run each Jupyter Notebook.**
 
 First, install the packages listed in `requirements.txt` in your Python 3.11.10 virtual environment.
@@ -61,17 +60,17 @@ Second, run each Jupyter Notebook file using Visual Studio Code. You should firs
 - **spiking_network_analysis.ipynb** → Figure 7, Supplementary Figure 16
 - **visualize_manifold.ipynb** → Figure 2e, Supplementary Figure 4b
 
-### 3. How we collected and analyzed data
+## 3. How we collected and analyzed data
 
-1. Extracellular electrophysiology datasets
-   We downloaded two extracellular electrophysiology datasets using NWB files: Allen Brain Observatory Visual Coding Neuropixels and Visual Behavior Neuropixels. We then extracted single-unit spike counts in MATLAB and saved them as `.mat` files.
-      For instructions on downloading NWB files, see the AllenSDK example:
-      https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_data_access.html#Using-the-AllenSDK-to-retrieve-data
-      https://allensdk.readthedocs.io/en/latest/_static/examples/nb/visual_behavior_neuropixels_data_access.html
+### 3-1. Extracellular electrophysiology datasets
+We downloaded two extracellular electrophysiology datasets using NWB files: Allen Brain Observatory Visual Coding Neuropixels and Visual Behavior Neuropixels. We then extracted single-unit spike counts in MATLAB and saved them as `.mat` files.
+   For instructions on downloading NWB files, see the AllenSDK example:
+   https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_data_access.html#Using-the-AllenSDK-to-retrieve-data
+   https://allensdk.readthedocs.io/en/latest/_static/examples/nb/visual_behavior_neuropixels_data_access.html
 
-   We also downloaded one publicly available dataset of monkey V1 single-unit spike counts (Cadena et al., PLoS Comp. Biol., 2024) from https://figshare.com/articles/dataset/Monkey_V1_responses_to_natural_images_from_Cadena_et_al_2023/23056805?backTo=%2Fcollections%2FMonkey_V1_and_V4_single-cell_responses_to_natural_images_ephys_Data_from_Cadena_et_al_2024_%2F6658331&file=40805201.
+We also downloaded one publicly available dataset of monkey V1 single-unit spike counts (Cadena et al., PLoS Comp. Biol., 2024) from https://figshare.com/articles/dataset/Monkey_V1_responses_to_natural_images_from_Cadena_et_al_2023/23056805?backTo=%2Fcollections%2FMonkey_V1_and_V4_single-cell_responses_to_natural_images_ephys_Data_from_Cadena_et_al_2024_%2F6658331&file=40805201.
 
-   We analyzed the spike counts in Jupyter Notebooks and Python scripts, and saved the resulting variables into pickle.gz files.
+We analyzed the spike counts in Jupyter Notebooks and Python scripts, and saved the resulting variables into pickle.gz files.
 
-2. Two-photon calcium imaging dataset
-   We downloaded one two-photon calcium imaging dataset: Allen Brain Observatory Visual Coding Optical Physiology. We extracted and analyzed single-unit dF/F and deconvolved event counts in a Jupyter Notebook based on AllenSDK (https://allensdk.readthedocs.io/en/latest/brain_observatory.html).
+### 3-2. Two-photon calcium imaging dataset
+We downloaded one two-photon calcium imaging dataset: Allen Brain Observatory Visual Coding Optical Physiology. We extracted and analyzed single-unit dF/F and deconvolved event counts in a Jupyter Notebook based on AllenSDK (https://allensdk.readthedocs.io/en/latest/brain_observatory.html).
