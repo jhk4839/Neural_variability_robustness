@@ -37,11 +37,11 @@ Second, run each Jupyter Notebook file using Visual Studio Code. You should firs
 - The MATLAB scripts have been verified to run in MATLAB R2024b.
 - The Python scripts inside the 'spiking network simulation' folder are for simulation of spiking networks in Linux (Rostami et al., Nat. Commun., 2024). They have been verified to run in a Python 3.11.13 virtual environment (WSL2 Ubuntu 24.04). They were modified from the publicly available code based on the NEST Simulator package (https://nest-simulator.readthedocs.io/en/stable/auto_examples/EI_clustered_network/index.html). To simulate the spiking network, follow the instructions below:
 
-First, in Windows PowerShell, install an Ubuntu distro. You can specify the name, for example, 'Ubuntu-24.04-test'.
+First, in Windows PowerShell, install Ubuntu 24.04. You can specify the distro name, for example, 'Ubuntu-24.04-test'.
 ```powershell
 wsl --install -d Ubuntu-24.04 --name Ubuntu-24.04-test
 ```
-Then, inside the Ubuntu, install Miniforge to use Mamba (https://github.com/conda-forge/miniforge).
+Then, in the Ubuntu terminal, install Miniforge to use Mamba (https://github.com/conda-forge/miniforge).
 ```bash
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
 bash Miniforge3-Linux-x86_64.sh -b -p "$HOME/miniforge3"
