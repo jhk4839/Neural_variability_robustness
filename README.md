@@ -7,9 +7,11 @@ This repository contains the source code for the manuscript "Intrinsic geometry 
 - MATLAB scripts (`.m`)  
 
 ### 2. How to run the code
+#### 2-1. Environment settings
 - The Jupyter Notebooks and Python scripts, except for those inside the folder 'spiking network simulation', have been verified to run using Visual Studio Code (Windows 11) in a Python 3.11.10 virtual environment after installing the packages listed in `requirements.txt` using pip 24.2. (Save `requirements.txt` in the same directory as the Jupyter Notebooks.)
 - The MATLAB scripts have been verified to run in MATLAB R2024b.
 - The Python scripts inside the folder 'spiking network simulation' are for simulation of spiking networks in Linux. They have been verified to run in WSL2 Ubuntu 24.04 using mamba. They were modified from the publicly available code using the NEST Simulator package (Rostami et al., Nat. Commun., 2024; see https://nest-simulator.readthedocs.io/en/stable/auto_examples/EI_clustered_network/index.html for documentation).
+
 First, install an Ubuntu distro. You can specify the name, for example, 'Ubuntu-24.04-test'.
 ```powershell
 wsl --install -d Ubuntu-24.04 --name Ubuntu-24.04-test
@@ -32,7 +34,7 @@ cd "/mnt/your_path/spiking network simulation"
 mamba activate ei_network
 python run_simulation.py
 ```
-
+#### 2-2. Minimal information to reproduce Figures
 **To generate the figures, you only need the Jupyter Notebooks, and pickle.gz files which can be downloaded from https://figshare.com/s/64957e60fe943cb732a7. Those pickle.gz files contain all the variables needed to run the Jupyter Notebooks, so save them in the same directory as the Jupyter Notebooks and run each Jupyter Notebook.**
 
 First, install the packages listed in `requirements.txt` in your Python 3.11.10 virtual environment.
