@@ -7,14 +7,21 @@ datapath = 'Z:\BerkeleyGoogleDriveBackup\DATA\OpenSource\AllenBrainNeuropixels\A
 
 % Set your save path
 pathsv = 'D:\Users\USER\MATLAB\Allen_Brain_Neuropixels\nm\';
-
 if ~exist(pathsv, 'dir')
     mkdir(pathsv)
 end
 
 sessions = readtable(strcat(datapath, 'sessions.csv'));
 
-%%
+% boolean for Brain_Observatory_1.1 sessions
+bool_BO = false(size(sessions, 1), 1);
+for ises = 1:size(sessions, 1)
+    if strcmp(sessions{ises, 'session_type'}{:}, 'brain_observatory_1.1')
+        bool_BO(ises) = true;
+    end
+end
+
+%% Extract firing rate for natural movie
 for ises = 1:size(sessions, 1)
     if ~ismember(ises, [5 14 43]) % movie one truncated
         tic
@@ -77,9 +84,7 @@ for ises = 1:size(sessions, 1)
 
         % natural_moive trials
         for movie_name = 1:2:3
-            if movie_name == 1
-                % load(strcat(pathsv, 'Rns_V1RS_', sesid, '.mat'))
-                % clear nmtrialframe
+            if movie_name == 1 % natural movie one
                 if strcmp(sessions{ises, 'session_type'}{:}, 'brain_observatory_1.1')
                     nmtrials = strcmp(stimtable.stimulus_name, 'natural_movie_one');
                     
@@ -111,8 +116,9 @@ for ises = 1:size(sessions, 1)
                 %     disp("Movies were truncated.")
                 %     continue;
                 % end
-        
-                % record psth from -250 to 500 ms; not important because we will cut using 'twin'
+                
+                % 1. Cut movie based on the number of frames (for 400 ms window)
+                % record psth from -250 to 500 ms
                 psthtlinm = (-250:500)';
         
                 % number of frames
@@ -141,10 +147,42 @@ for ises = 1:size(sessions, 1)
                 Ntrials = size(Rnm,1);
                 save(strcat(pathsv2, 'Rnm_V1_', sesid, '.mat'), ...
                     'nmtrialstart', 'psthnm', 'Rnm', 'Nunits', 'Ntrials', 'nmtrialframe', '-v7.3')
+
+                if ~strcmp(sessions{ises, 'session_type'}{:}, 'brain_observatory_1.1')
+                    % 2. Cut movie based on time window (for 250 ms window)
+                    moviedur_ms = floor(moviedur/Tres); % 30 sec movie = 30,000 ms
+                    psthtlinm = (1:moviedur_ms)';
+                    nmframe0 = nmtrials & (str2double(stimtable.frame) == 0);
+                    nmtrialstart = stimtable.start_time(nmframe0);
+                    psthtrialinds = floor(nmtrialstart'/Tres)+1 + psthtlinm;
+                    psthnm = false(length(psthtlinm), size(nmtrialstart, 1), numel(nwbunitsV1));
+            
+                    for ii = 1:numel(nwbunitsV1)
+                        tempST = spiketrain(:,ii);
+                        psthnm(:,:,ii) = tempST(psthtrialinds);
+                    end
+                    clear tempST psthtrialinds
+            
+                    % save path
+                    twin = 250; % time window (ms)
+                    pathsv2 = strcat(pathsv, num2str(twin), 'ms\');
+                    if ~exist(pathsv2, 'dir')
+                        mkdir(pathsv2)
+                    end
+                    [num_tot_timepoints, num_trials, num_neurons] = size(psthnm);
+                    psthnm = reshape(psthnm, [], floor(moviedur_ms/twin), num_trials, num_neurons); % (num_timepoints, num_trial_types, num_trials, num_neurons)
+                    [num_timepoints, num_trial_types, num_trials, num_neurons] = size(psthnm);
+                    psthnm = permute(psthnm, [1, 3, 2, 4]); % (num_timepoints, num_trials, num_trial_types, num_neurons)
+                    psthnm = reshape(psthnm, num_timepoints, [], num_neurons); % (num_timepoints, num_tot_trials, num_neurons)
+            
+                    Rnm = (1/Tres)*squeeze(mean(psthnm(psthtlinm>0&psthtlinm<=twin,:,:),1));
+                    Nunits = size(Rnm,2);
+                    Ntrials = size(Rnm,1);
+                    save(strcat(pathsv2, 'Rnm_V1_', sesid, '.mat'), ...
+                        'nmtrialstart', 'psthnm', 'Rnm', 'Nunits', 'Ntrials', 'nmtrialframe', '-v7.3')
+                end
                     
-            else
-                % load(strcat(pathsv, 'Rns_V1RS_', sesid, '.mat'))
-                % clear nmtrialframe
+            else % natural movie three
                 if strcmp(sessions{ises, 'session_type'}{:}, 'brain_observatory_1.1')
                     nmtrials = strcmp(stimtable.stimulus_name, 'natural_movie_three');
 
