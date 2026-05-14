@@ -41,7 +41,7 @@ First, in Windows PowerShell, install Ubuntu 24.04. You can specify the distro n
 ```powershell
 wsl --install -d Ubuntu-24.04 --name Ubuntu-24.04-test
 ```
-Then, in the Ubuntu terminal, install Miniforge to use Mamba (https://github.com/conda-forge/miniforge).
+Then, in the Ubuntu terminal, install Miniforge to use Mamba (https://github.com/conda-forge/miniforge). You can specify where Miniforge is installed, for example, $HOME/miniforge3.
 ```bash
 cd ~
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
@@ -49,7 +49,7 @@ bash Miniforge3-Linux-x86_64.sh -b -p "$HOME/miniforge3"
 mamba shell init --shell bash --root-prefix="$HOME/miniforge3"
 exec bash
 ```
-Finally, create a virtual environment using 'ei_network_explicit.txt' which includes the python packages including NEST. You can specify the environment name, for example, 'ei_network'.
+Finally, create a virtual environment using 'ei_network_explicit.txt' which contains the python packages including NEST. You can specify the environment name, for example, 'ei_network'.
 ```bash
 EXPLICIT="/mnt/your_path/ei_network_explicit.txt"
 mamba create -n ei_network --file "$EXPLICIT"
