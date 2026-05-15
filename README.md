@@ -10,12 +10,12 @@ This repository contains the source code for the manuscript "Intrinsic geometry 
 ### 2-1. Minimal information to reproduce figures
 **To generate the figures, you only need the Jupyter Notebooks, and pickle.gz files which can be downloaded from https://figshare.com/s/64957e60fe943cb732a7. Those pickle.gz files contain all the variables needed to run the Jupyter Notebooks, so save them in the same directory as the Jupyter Notebooks and run each Jupyter Notebook.**
 
-First, install the packages listed in `requirements.txt` in a Python 3.11.10 Conda environment (Save `requirements.txt` in the same directory as the Jupyter Notebooks).
+First, install the packages listed in `requirements.txt` in a Python 3.11.10 Conda environment.
 ```cmd
 python -m pip install pip==24.2
-python -m pip install -r requirements.txt
+python -m pip install -r "your_path\requirements.txt"
 ```
-Second, run each Jupyter Notebook file using Visual Studio Code. You should first run the helper codes at the top of the Notebook. Then, you can independently run specific cells for figures you want (If there are multiple cells for a figure panel, you should run them in order). In each Notebook, figure citations are at the top and immediately before each figure-generating cell. In summary:
+Second, run each Jupyter Notebook file using Visual Studio Code in the envrionment. You should first run the helper codes at the top of the Notebook. Then, you can independently run specific cells for figures you want (If there are multiple cells for a figure panel, you should run them in order). In each Notebook, figure citations are at the top and immediately before each figure-generating cell. In summary:
 
 - **decode_noise_corr.ipynb** → Figure 3b, Supplementary Figure 6a, 10a, b, e, 12b, 15b
 - **dimensionality.ipynb** → Figure 2c, Supplementary Figure 10c, d, 12a, 15a
