@@ -10,7 +10,7 @@ This repository contains the source code for the manuscript "Intrinsic geometry 
 ### 2-1. Minimal information to reproduce figures
 **To generate the figures, you only need the Jupyter Notebooks, and pickle.gz files which can be downloaded from https://figshare.com/s/64957e60fe943cb732a7. Those pickle.gz files contain all the variables needed to run the Jupyter Notebooks, so save them in the same directory as the Jupyter Notebooks and run each Jupyter Notebook.**
 
-First, install the packages listed in `requirements.txt` in a Python 3.11.10 virtual environment (Save `requirements.txt` in the same directory as the Jupyter Notebooks).
+First, install the packages listed in `requirements.txt` in a Python 3.11.10 Conda environment (Save `requirements.txt` in the same directory as the Jupyter Notebooks).
 ```cmd
 python -m pip install pip==24.2
 python -m pip install -r requirements.txt
@@ -33,9 +33,9 @@ Second, run each Jupyter Notebook file using Visual Studio Code. You should firs
 - **visualize_manifold.ipynb** → Figure 2e, Supplementary Figure 4b
 
 ### 2-2. Environment settings
-- The Jupyter Notebooks and Python scripts, except for those inside the folder 'spiking network simulation', have been verified to run in a Python 3.11.10 virtual environment using Visual Studio Code (Windows 11).
+- The Jupyter Notebooks and Python scripts, except for those inside the folder 'spiking network simulation', have been verified to run in a Python 3.11.10 Conda environment using Visual Studio Code and Anaconda Prompt, respectively (Windows 11).
 - The MATLAB scripts have been verified to run in MATLAB R2024b.
-- The Python scripts inside the 'spiking network simulation' folder are for simulation of spiking networks in Linux (Rostami et al., Nat. Commun., 2024). They have been verified to run in a Python 3.11.13 virtual environment (WSL2 Ubuntu 24.04). They were modified from the publicly available code based on the NEST Simulator package (https://nest-simulator.readthedocs.io/en/stable/auto_examples/EI_clustered_network/index.html). To simulate the spiking network, follow the instructions below:
+- The Python scripts inside the 'spiking network simulation' folder are for simulation of spiking networks in Linux (Rostami et al., Nat. Commun., 2024). They have been verified to run in a Python 3.11.13 Mamba environment using Ubuntu terminal (WSL2 Ubuntu 24.04). They were modified from the publicly available code based on the NEST Simulator package (https://nest-simulator.readthedocs.io/en/stable/auto_examples/EI_clustered_network/index.html). To simulate the spiking network, follow the instructions below:
 
 First, in Windows PowerShell, install Ubuntu 24.04. You can specify the distro name, for example, 'Ubuntu-24.04-test'.
 ```powershell
